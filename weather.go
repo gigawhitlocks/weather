@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,7 +12,22 @@ import (
 
 var zipMap map[zipCode]latLong
 
-type Weather struct {
+type Properties struct {
+	StationIdentifier string `json:"stationIdentifier"`
+	Name              string `json:"name"`
+}
+
+type Feature struct {
+	Id         string     `json:"id"`
+	Properties Properties `json:"properties"`
+}
+
+type Station struct {
+	Features []Feature `json:"features"`
+}
+
+func (s *Station) String() string {
+	return s.Features[0].Properties.StationIdentifier
 }
 
 type zipCode string
@@ -58,10 +74,10 @@ func readZips() map[zipCode]latLong {
 	return zipMap
 }
 
-func getWeather(z zipCode) (output string, err error) {
+func stationFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
-		return "", err
+		return
 	}
 	var resp *http.Response
 
@@ -74,22 +90,23 @@ func getWeather(z zipCode) (output string, err error) {
 	req.Proto = "HTTP/1.1"
 	req.Header.Set("Accept", "*/*")
 	if resp, err = client.Do(req); err != nil {
-		return "", err
+		return
 	}
 	defer resp.Body.Close()
 
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
+	output = new(Station)
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(output); err != nil {
+		return
 	}
-	return string(b), nil
+	return
 }
 
 func main() {
 	zipMap = readZips()
-	w, err := getWeather(zipCode("78704"))
+	w, err := stationFromZip(zipCode("78704"))
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("%s", w)
+	fmt.Printf("%s", w.String())
 }
