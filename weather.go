@@ -26,7 +26,7 @@ type Station struct {
 	Features []StationFeature `json:"features"`
 }
 
-func (s *Station) String() string {
+func (s *Station) ID() string {
 	if len(s.Features) < 1 {
 		return ""
 	}
@@ -95,6 +95,10 @@ func NewRequest(uri string) (n *NWSRequest) {
 	return
 }
 
+func (n *NWSRequest) Do() (*http.Response, error) {
+	return n.Client.Do(n.Request)
+}
+
 func stationFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
@@ -104,11 +108,11 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 		"points/%s,%s/stations",
 		l[0], l[1]))
 
-	var resp *http.Response
-	if resp, err = n.Client.Do(n.Request); err != nil {
+	resp, err := n.Do()
+	defer resp.Body.Close()
+	if err != nil {
 		return
 	}
-	defer resp.Body.Close()
 
 	output = new(Station)
 	decoder := json.NewDecoder(resp.Body)
@@ -118,8 +122,52 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 	return
 }
 
-func getObservations(stationID string) {
+type ObservationProperty struct {
+	Value          float32 `json:"value"`
+	UnitCode       string  `json:"unitCode"`
+	QualityControl string  `json:"qualityControl"`
+}
 
+type ObservationProperties struct {
+	Timestamp                 string              `json:"timestamp"`
+	Icon                      string              `json:"icon"`
+	TextDescription           string              `json:"textDescription"`
+	Temperature               ObservationProperty `json:"temperature"`
+	Dewpoint                  ObservationProperty `json:"dewpoint"`
+	WindDirection             ObservationProperty `json:"windDirection"`
+	WindSpeed                 ObservationProperty `json:"windSpeed"`
+	WindGust                  ObservationProperty `json:"windGust"`
+	BarometricPressure        ObservationProperty `json:"barometricPressure"`
+	SeaLevelPressure          ObservationProperty `json:"seaLevelPressure"`
+	Visibility                ObservationProperty `json:"visibility"`
+	MaxTemperatureLast24Hours ObservationProperty `json:"maxTemperatureLast24Hours"`
+	MinTemperatureLast24Hours ObservationProperty `json:"minTemperatureLast24Hours"`
+	PrecipitationLastHour     ObservationProperty `json:"precipitationLastHour"`
+	PrecipitationLast3Hours   ObservationProperty `json:"precipitationLast3Hours"`
+	PrecipitationLast6Hours   ObservationProperty `json:"precipitationLast6Hours"`
+	RelativeHumidity          ObservationProperty `json:"relativeHumidity"`
+	WindChill                 ObservationProperty `json:"windChill"`
+	HeatIndex                 ObservationProperty `json:"heatIndex"`
+}
+
+type Observation struct {
+	ObservationProperties `json:"properties"`
+}
+
+func getObservations(stationID string) string {
+	n := NewRequest(fmt.Sprintf(
+		"/stations/%s/observations/current", stationID))
+	resp, err := n.Do()
+	defer resp.Body.Close()
+	if err != nil {
+		return err.Error()
+	}
+	o := new(Observation)
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(o); err != nil {
+		return err.Error()
+	}
+	return o.TextDescription
 }
 
 func main() {
@@ -128,5 +176,5 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Printf("%s", w.String())
+	fmt.Printf(getObservations(w.ID()))
 }
