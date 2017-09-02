@@ -12,26 +12,31 @@ import (
 
 var zipMap map[zipCode]latLong
 
-type Properties struct {
+type StationProperties struct {
 	StationIdentifier string `json:"stationIdentifier"`
 	Name              string `json:"name"`
 }
 
-type Feature struct {
-	Id         string     `json:"id"`
-	Properties Properties `json:"properties"`
+type StationFeature struct {
+	Id         string            `json:"id"`
+	Properties StationProperties `json:"properties"`
 }
 
 type Station struct {
-	Features []Feature `json:"features"`
+	Features []StationFeature `json:"features"`
 }
 
 func (s *Station) String() string {
+	if len(s.Features) < 1 {
+		return ""
+	}
 	return s.Features[0].Properties.StationIdentifier
 }
 
 type zipCode string
 type latLong [2]string
+
+const NWSAPI string = "https://api.weather.gov"
 
 func zipToLatLong(z zipCode) (latLong, error) {
 	if l, ok := zipMap[z]; ok {
@@ -74,22 +79,33 @@ func readZips() map[zipCode]latLong {
 	return zipMap
 }
 
+type NWSRequest struct {
+	Client  *http.Client
+	Request *http.Request
+}
+
+func NewRequest(uri string) (n *NWSRequest) {
+	n = new(NWSRequest)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s", NWSAPI, uri), nil)
+	req.Proto = "HTTP/1.1"
+	req.Header.Set("Accept", "*/*")
+	n.Client = client
+	n.Request = req
+	return
+}
+
 func stationFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
 		return
 	}
-	var resp *http.Response
+	n := NewRequest(fmt.Sprintf(
+		"points/%s,%s/stations",
+		l[0], l[1]))
 
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET",
-		fmt.Sprintf(
-			"https://api.weather.gov/points/%s,%s/stations",
-			l[0], l[1]),
-		nil)
-	req.Proto = "HTTP/1.1"
-	req.Header.Set("Accept", "*/*")
-	if resp, err = client.Do(req); err != nil {
+	var resp *http.Response
+	if resp, err = n.Client.Do(n.Request); err != nil {
 		return
 	}
 	defer resp.Body.Close()
@@ -100,6 +116,10 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 		return
 	}
 	return
+}
+
+func getObservations(stationID string) {
+
 }
 
 func main() {
