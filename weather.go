@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+	"net/http"
 	"strings"
 )
 
@@ -37,33 +37,59 @@ func readZips() map[zipCode]latLong {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			fmt.Printf("%s", err)
+			return nil
+		}
+		if record[0] == "ZIP" {
+			continue
+		}
+		trimRecord := func(record string) string {
+			record = strings.Trim(record, " ")
+			s := strings.SplitN(record, ".", 2)
+			for len(s[1]) > 2 {
+				s[1] = s[1][0 : len(s[1])-1]
+			}
+			return fmt.Sprintf("%s.%s", s[0], s[1])
 		}
 		zipMap[zipCode(record[0])] = latLong([2]string{
-			record[1],
-			record[2]})
+			trimRecord(record[1]),
+			trimRecord(record[2])})
 	}
 	return zipMap
 }
 
-func getWeather() (output string, err error) {
-	// var resp *http.Response
-	// if resp, err = http.Get(""); err != nil {
-	// 	return "", err
-	// }
-	// decoder := json.NewDecoder(resp.Body)
-	// if decoder == nil {
-	// 	return "", fmt.Errorf("fuck")
-	// }
-	// w := &Weather{}
-	// err = decoder.Decode(w)
-	// if w == nil {
-	// 	return "", err
-	// }
-	// return w.String(), nil
-	return "", nil
+func getWeather(z zipCode) (output string, err error) {
+	l, err := zipToLatLong(z)
+	if err != nil {
+		return "", err
+	}
+	var resp *http.Response
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET",
+		fmt.Sprintf(
+			"https://api.weather.gov/points/%s,%s/stations",
+			l[0], l[1]),
+		nil)
+	req.Proto = "HTTP/1.1"
+	req.Header.Set("Accept", "*/*")
+	if resp, err = client.Do(req); err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
 }
 
 func main() {
 	zipMap = readZips()
+	w, err := getWeather(zipCode("78704"))
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Printf("%s", w)
 }
