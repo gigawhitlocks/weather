@@ -8,11 +8,13 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"text/template"
 )
 
 const observationTmpl string = `Current Weather For {{.Name}}
+Observatory: {{.Station}}
 Time of Observation: {{.Timestamp}}
 Conditions: {{.Conditions}}
 Temperature: {{.Temperature}} F
@@ -25,15 +27,16 @@ Heat index: {{.HeatIndex}} F
 
 type Result struct {
 	Name                  string
+	Station               string
 	Timestamp             string
 	Conditions            string
 	TemperatureValue      string
 	BarometricPressure    float32
-	Temperature           float32
+	Temperature           string
 	WindSpeed             float32
 	WindGust              float32
 	PrecipitationLastHour float32
-	HeatIndex             float32
+	HeatIndex             string
 }
 
 type zipCode string
@@ -145,11 +148,8 @@ func readZips() map[zipCode]latLong {
 		}
 		trimRecord := func(record string) string {
 			record = strings.Trim(record, " ")
-			s := strings.SplitN(record, ".", 2)
-			for len(s[1]) > 2 {
-				s[1] = s[1][0 : len(s[1])-1]
-			}
-			return fmt.Sprintf("%s.%s", s[0], s[1])
+			s, _ := strconv.ParseFloat(record, 64)
+			return fmt.Sprintf("%.1f", s)
 		}
 		zipMap[zipCode(record[0])] = latLong([2]string{
 			trimRecord(record[1]),
@@ -161,8 +161,9 @@ func readZips() map[zipCode]latLong {
 func stationFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
-		return
+		return nil, err
 	}
+	fmt.Println(l)
 	n := NewRequest(fmt.Sprintf(
 		"points/%s,%s/stations",
 		l[0], l[1]))
@@ -170,13 +171,20 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 	resp, err := n.Do()
 	defer resp.Body.Close()
 	if err != nil {
-		return
+		return nil, err
+	}
+
+	if resp.Status != "200 OK" {
+		fmt.Println(resp.Status)
+		// buf, _ := ioutil.ReadAll(resp.Body)
+		// fmt.Printf("%s", string(buf))
+		return nil, fmt.Errorf("bad response from nws\n")
 	}
 
 	output = new(Station)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(output); err != nil {
-		return
+		return nil, err
 	}
 	return
 }
@@ -208,31 +216,45 @@ func (o *Result) String() string {
 	return buf.String()
 }
 
-func toFahrenheit(in float32) float32 {
-	return in*1.8 + 32
+func toFahrenheit(in float32) string {
+	return fmt.Sprintf("%.1f", in*1.8+32)
 }
 
 func main() {
 	zipMap = readZips()
-	w, err := stationFromZip(zipCode("78704"))
-	if err != nil {
-		panic(err)
-	}
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		zip := r.URL.Query().Get("zip")
+		fmt.Printf("%s", zip)
+		if len(zip) != 5 {
+			fmt.Fprintf(w, "%s", zip)
+			return
+		}
 
-	o, err := getCurrentObservation(w.ID())
-	if err != nil {
-		panic(err)
-	}
+		wthr, err := stationFromZip(zipCode(zip))
+		if err != nil {
+			fmt.Printf("%s", err.Error())
+			return
+		}
 
-	fmt.Printf("%s", &Result{
-		Name:                  "78704",
-		Conditions:            o.TextDescription,
-		Timestamp:             o.Timestamp,
-		Temperature:           toFahrenheit(o.Temperature.Value),
-		BarometricPressure:    o.BarometricPressure.Value,
-		WindSpeed:             o.WindSpeed.Value,
-		WindGust:              o.WindGust.Value,
-		PrecipitationLastHour: o.PrecipitationLastHour.Value,
-		HeatIndex:             toFahrenheit(o.HeatIndex.Value),
+		o, err := getCurrentObservation(wthr.ID())
+		if err != nil {
+			fmt.Printf("%s", err.Error())
+			return
+		}
+
+		fmt.Fprintf(w, "%s", &Result{
+			Name:                  zip,
+			Station:               wthr.ID(),
+			Conditions:            o.TextDescription,
+			Timestamp:             o.Timestamp,
+			Temperature:           toFahrenheit(o.Temperature.Value),
+			BarometricPressure:    o.BarometricPressure.Value,
+			WindSpeed:             o.WindSpeed.Value,
+			WindGust:              o.WindGust.Value,
+			PrecipitationLastHour: o.PrecipitationLastHour.Value,
+			HeatIndex:             toFahrenheit(o.HeatIndex.Value),
+		})
 	})
+
+	fmt.Printf("%s", http.ListenAndServe(":8080", nil))
 }
