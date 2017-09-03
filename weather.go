@@ -13,30 +13,19 @@ import (
 	"text/template"
 )
 
-const observationTmpl string = `Current Weather For {{.Name}}
-Observatory: {{.Station}}
-Time of Observation: {{.Timestamp}}
-Conditions: {{.Conditions}}
-Temperature: {{.Temperature}} F
-Barometric pressure: {{.BarometricPressure}} Pa
-Wind speed: {{.WindSpeed}} m/s
-Wind gust: {{.WindGust}} m/s
-Precipitation in the last hour: {{.PrecipitationLastHour}} m
-Heat index: {{.HeatIndex}} F
-`
-
 type Result struct {
-	Name                  string
-	Station               string
-	Timestamp             string
-	Conditions            string
-	TemperatureValue      string
 	BarometricPressure    float32
-	Temperature           string
-	WindSpeed             float32
-	WindGust              float32
-	PrecipitationLastHour float32
+	Conditions            string
 	HeatIndex             string
+	Name                  string
+	PrecipitationLastHour float32
+	RelativeHumidity      string
+	Station               string
+	Temperature           string
+	TemperatureValue      string
+	Timestamp             string
+	WindGust              float32
+	WindSpeed             float32
 }
 
 type zipCode string
@@ -207,7 +196,18 @@ func getCurrentObservation(stationID string) (o *Observation, err error) {
 
 func (o *Result) String() string {
 	t := template.New("results")
-	t, err := t.Parse(observationTmpl)
+	t, err := t.Parse(`Current Weather For {{.Name}}
+Observatory: {{.Station}}
+Time of Observation: {{.Timestamp}}
+Conditions: {{.Conditions}}
+Temperature: {{.Temperature}} F
+Relative humidity: {{.RelativeHumidity}}%
+Heat index: {{.HeatIndex}} F
+Barometric pressure: {{.BarometricPressure}} Pa
+Wind speed: {{.WindSpeed}} m/s
+Wind gust: {{.WindGust}} m/s
+Precipitation in the last hour: {{.PrecipitationLastHour}} m
+`)
 	if err != nil {
 		fmt.Println(err.Error())
 	}
@@ -224,7 +224,6 @@ func main() {
 	zipMap = readZips()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		zip := r.URL.Query().Get("zip")
-		fmt.Printf("%s", zip)
 		if len(zip) != 5 {
 			fmt.Fprintf(w, "%s", zip)
 			return
@@ -253,6 +252,7 @@ func main() {
 			WindGust:              o.WindGust.Value,
 			PrecipitationLastHour: o.PrecipitationLastHour.Value,
 			HeatIndex:             toFahrenheit(o.HeatIndex.Value),
+			RelativeHumidity:      fmt.Sprintf("%.2f", o.RelativeHumidity.Value),
 		})
 	})
 
