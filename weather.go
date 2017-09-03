@@ -49,11 +49,11 @@ type Station struct {
 	Features []StationFeature `json:"features"`
 }
 
-func (s *Station) ID() string {
-	if len(s.Features) < 1 {
+func (s *Station) ID(which int) string {
+	if len(s.Features) < which {
 		return ""
 	}
-	return s.Features[0].Properties.StationIdentifier
+	return s.Features[which].Properties.StationIdentifier
 }
 
 type ObservationProperty struct {
@@ -147,7 +147,7 @@ func readZips() map[zipCode]latLong {
 	return zipMap
 }
 
-func stationFromZip(z zipCode) (output *Station, err error) {
+func stationsFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
 		return nil, err
@@ -230,21 +230,34 @@ func main() {
 			return
 		}
 
-		wthr, err := stationFromZip(zipCode(zip))
+		wthr, err := stationsFromZip(zipCode(zip))
 		if err != nil {
 			fmt.Printf("%s", err.Error())
 			return
 		}
 
-		o, err := getCurrentObservation(wthr.ID())
+		i := 0
+		o, err := getCurrentObservation(wthr.ID(i))
 		if err != nil {
 			fmt.Printf("%s", err.Error())
 			return
+		}
+		for o.Timestamp == "" {
+			i++
+			if wthr.ID(i) == "" {
+				fmt.Fprintln(w, "No forecast found :(")
+				return
+			}
+			o, err = getCurrentObservation(wthr.ID(i))
+			if err != nil {
+				fmt.Printf("%s", err.Error())
+				continue
+			}
 		}
 
 		fmt.Fprintf(w, "%s", &Result{
 			Name:                  zip,
-			Station:               wthr.ID(),
+			Station:               wthr.ID(i),
 			Conditions:            o.TextDescription,
 			Timestamp:             o.Timestamp,
 			Temperature:           toFahrenheit(o.Temperature.Value),
