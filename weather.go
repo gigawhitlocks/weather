@@ -29,7 +29,7 @@ type Result struct {
 }
 
 type zipCode string
-type latLong [2]string
+type latLong [2]float64
 
 var zipMap map[zipCode]latLong
 
@@ -135,14 +135,14 @@ func readZips() map[zipCode]latLong {
 		if record[0] == "ZIP" {
 			continue
 		}
-		trimRecord := func(record string) string {
+		convFloat := func(record string) float64 {
 			record = strings.Trim(record, " ")
 			s, _ := strconv.ParseFloat(record, 64)
-			return fmt.Sprintf("%.1f", s)
+			return s
 		}
-		zipMap[zipCode(record[0])] = latLong([2]string{
-			trimRecord(record[1]),
-			trimRecord(record[2])})
+		zipMap[zipCode(record[0])] = latLong([2]float64{
+			convFloat(record[1]),
+			convFloat(record[2])})
 	}
 	return zipMap
 }
@@ -152,24 +152,25 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(l)
-	n := NewRequest(fmt.Sprintf(
-		"points/%s,%s/stations",
-		l[0], l[1]))
+	var resp *http.Response
+	for i := 2; i >= 0; i-- {
+		points := fmt.Sprintf(fmt.Sprintf("%%.%df,%%.%df", i, i), l[0], l[1])
+		n := NewRequest(fmt.Sprintf(
+			"points/%s/stations", points))
 
-	resp, err := n.Do()
-	defer resp.Body.Close()
-	if err != nil {
-		return nil, err
+		resp, err = n.Do()
+		defer resp.Body.Close()
+		if err != nil {
+			continue
+		}
+
+		if resp.Status == "200 OK" {
+			break
+		}
 	}
-
 	if resp.Status != "200 OK" {
-		fmt.Println(resp.Status)
-		// buf, _ := ioutil.ReadAll(resp.Body)
-		// fmt.Printf("%s", string(buf))
-		return nil, fmt.Errorf("bad response from nws\n")
+		return nil, fmt.Errorf("Bad response from NWS")
 	}
-
 	output = new(Station)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(output); err != nil {
