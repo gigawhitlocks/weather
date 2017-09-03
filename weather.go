@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -8,7 +9,32 @@ import (
 	"io/ioutil"
 	"net/http"
 	"strings"
+	"text/template"
 )
+
+const observationTmpl string = `Current Weather For {{.Name}}
+Time of Observation: {{.Timestamp}}
+Conditions: {{.Conditions}}
+Temperature: {{.Temperature}} F
+Barometric pressure: {{.BarometricPressure}} Pa
+Wind speed: {{.WindSpeed}} m/s
+Wind gust: {{.WindGust}} m/s
+Precipitation in the last hour: {{.PrecipitationLastHour}} m
+Heat index: {{.HeatIndex}} F
+`
+
+type Result struct {
+	Name                  string
+	Timestamp             string
+	Conditions            string
+	TemperatureValue      string
+	BarometricPressure    float32
+	Temperature           float32
+	WindSpeed             float32
+	WindGust              float32
+	PrecipitationLastHour float32
+	HeatIndex             float32
+}
 
 type zipCode string
 type latLong [2]string
@@ -45,6 +71,7 @@ type ObservationProperty struct {
 }
 
 type ObservationProperties struct {
+	Station                   string              `json:"station"`
 	Timestamp                 string              `json:"timestamp"`
 	Icon                      string              `json:"icon"`
 	TextDescription           string              `json:"textDescription"`
@@ -170,6 +197,21 @@ func getCurrentObservation(stationID string) (o *Observation, err error) {
 	return o, nil
 }
 
+func (o *Result) String() string {
+	t := template.New("results")
+	t, err := t.Parse(observationTmpl)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+	buf := new(bytes.Buffer)
+	t.Execute(buf, o)
+	return buf.String()
+}
+
+func toFahrenheit(in float32) float32 {
+	return in*1.8 + 32
+}
+
 func main() {
 	zipMap = readZips()
 	w, err := stationFromZip(zipCode("78704"))
@@ -177,9 +219,20 @@ func main() {
 		panic(err)
 	}
 
-	current, err := getCurrentObservation(w.ID())
+	o, err := getCurrentObservation(w.ID())
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(current)
+
+	fmt.Printf("%s", &Result{
+		Name:                  "78704",
+		Conditions:            o.TextDescription,
+		Timestamp:             o.Timestamp,
+		Temperature:           toFahrenheit(o.Temperature.Value),
+		BarometricPressure:    o.BarometricPressure.Value,
+		WindSpeed:             o.WindSpeed.Value,
+		WindGust:              o.WindGust.Value,
+		PrecipitationLastHour: o.PrecipitationLastHour.Value,
+		HeatIndex:             toFahrenheit(o.HeatIndex.Value),
+	})
 }
