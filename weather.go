@@ -10,7 +10,12 @@ import (
 	"strings"
 )
 
+type zipCode string
+type latLong [2]string
+
 var zipMap map[zipCode]latLong
+
+const NWSAPI string = "https://api.weather.gov"
 
 type StationProperties struct {
 	StationIdentifier string `json:"stationIdentifier"`
@@ -33,10 +38,57 @@ func (s *Station) ID() string {
 	return s.Features[0].Properties.StationIdentifier
 }
 
-type zipCode string
-type latLong [2]string
+type ObservationProperty struct {
+	Value          float32 `json:"value"`
+	UnitCode       string  `json:"unitCode"`
+	QualityControl string  `json:"qualityControl"`
+}
 
-const NWSAPI string = "https://api.weather.gov"
+type ObservationProperties struct {
+	Timestamp                 string              `json:"timestamp"`
+	Icon                      string              `json:"icon"`
+	TextDescription           string              `json:"textDescription"`
+	Temperature               ObservationProperty `json:"temperature"`
+	Dewpoint                  ObservationProperty `json:"dewpoint"`
+	WindDirection             ObservationProperty `json:"windDirection"`
+	WindSpeed                 ObservationProperty `json:"windSpeed"`
+	WindGust                  ObservationProperty `json:"windGust"`
+	BarometricPressure        ObservationProperty `json:"barometricPressure"`
+	SeaLevelPressure          ObservationProperty `json:"seaLevelPressure"`
+	Visibility                ObservationProperty `json:"visibility"`
+	MaxTemperatureLast24Hours ObservationProperty `json:"maxTemperatureLast24Hours"`
+	MinTemperatureLast24Hours ObservationProperty `json:"minTemperatureLast24Hours"`
+	PrecipitationLastHour     ObservationProperty `json:"precipitationLastHour"`
+	PrecipitationLast3Hours   ObservationProperty `json:"precipitationLast3Hours"`
+	PrecipitationLast6Hours   ObservationProperty `json:"precipitationLast6Hours"`
+	RelativeHumidity          ObservationProperty `json:"relativeHumidity"`
+	WindChill                 ObservationProperty `json:"windChill"`
+	HeatIndex                 ObservationProperty `json:"heatIndex"`
+}
+
+type Observation struct {
+	ObservationProperties `json:"properties"`
+}
+
+type NWSRequest struct {
+	Client  *http.Client
+	Request *http.Request
+}
+
+func NewRequest(uri string) (n *NWSRequest) {
+	n = new(NWSRequest)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s", NWSAPI, uri), nil)
+	req.Proto = "HTTP/1.1"
+	req.Header.Set("Accept", "*/*")
+	n.Client = client
+	n.Request = req
+	return
+}
+
+func (n *NWSRequest) Do() (*http.Response, error) {
+	return n.Client.Do(n.Request)
+}
 
 func zipToLatLong(z zipCode) (latLong, error) {
 	if l, ok := zipMap[z]; ok {
@@ -79,26 +131,6 @@ func readZips() map[zipCode]latLong {
 	return zipMap
 }
 
-type NWSRequest struct {
-	Client  *http.Client
-	Request *http.Request
-}
-
-func NewRequest(uri string) (n *NWSRequest) {
-	n = new(NWSRequest)
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", fmt.Sprintf("%s/%s", NWSAPI, uri), nil)
-	req.Proto = "HTTP/1.1"
-	req.Header.Set("Accept", "*/*")
-	n.Client = client
-	n.Request = req
-	return
-}
-
-func (n *NWSRequest) Do() (*http.Response, error) {
-	return n.Client.Do(n.Request)
-}
-
 func stationFromZip(z zipCode) (output *Station, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
@@ -122,59 +154,32 @@ func stationFromZip(z zipCode) (output *Station, err error) {
 	return
 }
 
-type ObservationProperty struct {
-	Value          float32 `json:"value"`
-	UnitCode       string  `json:"unitCode"`
-	QualityControl string  `json:"qualityControl"`
-}
-
-type ObservationProperties struct {
-	Timestamp                 string              `json:"timestamp"`
-	Icon                      string              `json:"icon"`
-	TextDescription           string              `json:"textDescription"`
-	Temperature               ObservationProperty `json:"temperature"`
-	Dewpoint                  ObservationProperty `json:"dewpoint"`
-	WindDirection             ObservationProperty `json:"windDirection"`
-	WindSpeed                 ObservationProperty `json:"windSpeed"`
-	WindGust                  ObservationProperty `json:"windGust"`
-	BarometricPressure        ObservationProperty `json:"barometricPressure"`
-	SeaLevelPressure          ObservationProperty `json:"seaLevelPressure"`
-	Visibility                ObservationProperty `json:"visibility"`
-	MaxTemperatureLast24Hours ObservationProperty `json:"maxTemperatureLast24Hours"`
-	MinTemperatureLast24Hours ObservationProperty `json:"minTemperatureLast24Hours"`
-	PrecipitationLastHour     ObservationProperty `json:"precipitationLastHour"`
-	PrecipitationLast3Hours   ObservationProperty `json:"precipitationLast3Hours"`
-	PrecipitationLast6Hours   ObservationProperty `json:"precipitationLast6Hours"`
-	RelativeHumidity          ObservationProperty `json:"relativeHumidity"`
-	WindChill                 ObservationProperty `json:"windChill"`
-	HeatIndex                 ObservationProperty `json:"heatIndex"`
-}
-
-type Observation struct {
-	ObservationProperties `json:"properties"`
-}
-
-func getObservations(stationID string) string {
+func getCurrentObservation(stationID string) (o *Observation, err error) {
 	n := NewRequest(fmt.Sprintf(
 		"/stations/%s/observations/current", stationID))
 	resp, err := n.Do()
 	defer resp.Body.Close()
 	if err != nil {
-		return err.Error()
+		return nil, err
 	}
-	o := new(Observation)
+	o = new(Observation)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(o); err != nil {
-		return err.Error()
+		return nil, err
 	}
-	return o.TextDescription
+	return o, nil
 }
 
 func main() {
 	zipMap = readZips()
 	w, err := stationFromZip(zipCode("78704"))
 	if err != nil {
-		fmt.Println(err)
+		panic(err)
 	}
-	fmt.Printf(getObservations(w.ID()))
+
+	current, err := getCurrentObservation(w.ID())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(current)
 }
