@@ -1,0 +1,16 @@
+[Unit]
+Description=Weather For RocketChat
+After=syslog.target
+After=network.target
+
+[Service]
+Type=simple
+User=weather
+Group=weather
+WorkingDirectory=/home/weather/weather
+ExecStart=/home/weather/weather/weather
+Restart=always
+Environment=USER=weather HOME=/home/weather
+
+[Install]
+WantedBy=multi-user.target
