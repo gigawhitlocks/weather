@@ -239,7 +239,6 @@ func getCurrentAlerts(stationID string) (a *AlertList, err error) {
 	if err = decoder.Decode(a); err != nil {
 		return nil, err
 	}
-	fmt.Printf("%+v", a)
 	return a, nil
 }
 
