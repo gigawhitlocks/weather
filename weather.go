@@ -26,6 +26,7 @@ type Result struct {
 	Timestamp             string
 	WindGust              float32
 	WindSpeed             float32
+	Alerts                []Alert
 }
 
 type zipCode string
@@ -35,21 +36,21 @@ var zipMap map[zipCode]latLong
 
 const NWSAPI string = "https://api.weather.gov"
 
-type StationProperties struct {
+type StationListProperties struct {
 	StationIdentifier string `json:"stationIdentifier"`
 	Name              string `json:"name"`
 }
 
-type StationFeature struct {
-	Id         string            `json:"id"`
-	Properties StationProperties `json:"properties"`
+type StationListFeature struct {
+	Id         string                `json:"id"`
+	Properties StationListProperties `json:"properties"`
 }
 
-type Station struct {
-	Features []StationFeature `json:"features"`
+type StationList struct {
+	Features []StationListFeature `json:"features"`
 }
 
-func (s *Station) ID(which int) string {
+func (s *StationList) ID(which int) string {
 	if len(s.Features) < which {
 		return ""
 	}
@@ -147,7 +148,7 @@ func readZips() map[zipCode]latLong {
 	return zipMap
 }
 
-func stationsFromZip(z zipCode) (output *Station, err error) {
+func stationsFromZip(z zipCode) (output *StationList, err error) {
 	l, err := zipToLatLong(z)
 	if err != nil {
 		return nil, err
@@ -171,12 +172,75 @@ func stationsFromZip(z zipCode) (output *Station, err error) {
 	if resp.Status != "200 OK" {
 		return nil, fmt.Errorf("Bad response from NWS")
 	}
-	output = new(Station)
+	output = new(StationList)
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(output); err != nil {
 		return nil, err
 	}
 	return
+}
+
+type AlertProperties struct {
+	Severity    string `json:"severity"`
+	Certainty   string `json:"certainty"`
+	Urgency     string `json:"urgency"`
+	Event       string `json:"event"`
+	Sender      string `json:"sender"`
+	Headline    string `json:"headline"`
+	Description string `json:"description"`
+	Instruction string `json:"instruction"`
+}
+
+type Alert struct {
+	AlertProperties `json:"properties"`
+}
+
+type AlertList struct {
+	Alerts []Alert `json:"features"`
+}
+
+type StationProperties struct {
+	County string `json:"county"`
+}
+
+type Station struct {
+	StationProperties `json:"properties"`
+}
+
+func getCountyCode(stationID string) string {
+	n := NewRequest(fmt.Sprintf(
+		"/stations/%s", stationID))
+	resp, err := n.Do()
+	defer resp.Body.Close()
+	if err != nil {
+		return ""
+	}
+	s := new(Station)
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(s); err != nil {
+		return ""
+	}
+
+	parts := strings.Split(s.County, "/")
+	return parts[len(parts)-1]
+}
+
+func getCurrentAlerts(stationID string) (a *AlertList, err error) {
+	c := getCountyCode(stationID)
+	n := NewRequest(fmt.Sprintf(
+		"/alerts/active/zone/%s", c))
+	resp, err := n.Do()
+	defer resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	a = new(AlertList)
+	decoder := json.NewDecoder(resp.Body)
+	if err = decoder.Decode(a); err != nil {
+		return nil, err
+	}
+	fmt.Printf("%+v", a)
+	return a, nil
 }
 
 func getCurrentObservation(stationID string) (o *Observation, err error) {
@@ -204,7 +268,7 @@ Conditions: {{.Conditions}}
 Temperature: {{.Temperature}} F
 Relative humidity: {{.RelativeHumidity}}%
 Heat index: {{.HeatIndex}} F
-Barometric pressure: {{.BarometricPressure}} Pa
+Barometric pressure: {{.BarometricPressure}} in Hg
 Wind speed: {{.WindSpeed}} m/s
 Wind gust: {{.WindGust}} m/s
 Precipitation in the last hour: {{.PrecipitationLastHour}} m
@@ -214,11 +278,33 @@ Precipitation in the last hour: {{.PrecipitationLastHour}} m
 	}
 	buf := new(bytes.Buffer)
 	t.Execute(buf, o)
+
+	if len(o.Alerts) <= 0 {
+		return buf.String()
+	}
+
+	t = template.New("Alerts")
+	t, err = t.Parse(`
+**{{.Headline}}**
+Severity: {{.Severity}}
+Certainty: {{.Certainty}}
+Urgency: {{.Urgency}}
+{{.Description}}
+{{.Instruction}}
+`)
+	for _, a := range o.Alerts {
+		t.Execute(buf, a)
+	}
+
 	return buf.String()
 }
 
 func toFahrenheit(in float32) string {
 	return fmt.Sprintf("%.1f", in*1.8+32)
+}
+
+func toInchesHg(pascals float32) float32 {
+	return pascals / 3386.38866
 }
 
 func main() {
@@ -254,19 +340,27 @@ func main() {
 				continue
 			}
 		}
+		stationName := wthr.Features[i].Properties.Name
+		a, err := getCurrentAlerts(wthr.ID(i))
+
+		if err != nil {
+			fmt.Println(err.Error())
+			a = nil
+		}
 
 		fmt.Fprintf(w, "%s", &Result{
 			Name:                  zip,
-			Station:               wthr.ID(i),
+			Station:               stationName,
 			Conditions:            o.TextDescription,
 			Timestamp:             o.Timestamp,
 			Temperature:           toFahrenheit(o.Temperature.Value),
-			BarometricPressure:    o.BarometricPressure.Value,
+			BarometricPressure:    toInchesHg(o.BarometricPressure.Value),
 			WindSpeed:             o.WindSpeed.Value,
 			WindGust:              o.WindGust.Value,
 			PrecipitationLastHour: o.PrecipitationLastHour.Value,
 			HeatIndex:             toFahrenheit(o.HeatIndex.Value),
 			RelativeHumidity:      fmt.Sprintf("%.2f", o.RelativeHumidity.Value),
+			Alerts:                a.Alerts,
 		})
 	})
 
