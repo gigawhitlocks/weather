@@ -311,7 +311,6 @@ func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		zip := r.URL.Query().Get("zip")
 		if len(zip) != 5 {
-			fmt.Fprintf(w, "%s", zip)
 			return
 		}
 
