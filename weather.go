@@ -309,7 +309,7 @@ func toInchesHg(pascals float32) float32 {
 func main() {
 	zipMap = readZips()
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		zip := r.URL.Query().Get("zip")
+		zip := r.URL.Query().Get("zip")[0:5]
 		if len(zip) != 5 {
 			return
 		}
