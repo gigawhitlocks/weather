@@ -188,6 +188,8 @@ func GetWeather(query string) (result *Weather, err error) {
 			return nil, err
 		}
 
+	} else {
+		return nil, fmt.Errorf("Query malformed; provide ZIP or City, St.")
 	}
 	output := new(Weather)
 	decoder := json.NewDecoder(resp.Body)
