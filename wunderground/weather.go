@@ -11,7 +11,9 @@ import (
 	"strings"
 )
 
-var validQuery = regexp.MustCompile("^[A-Z a-z]+$")
+var cityStatePattern, _ = regexp.Compile("[A-Za-z]+,?[ \t]+[A-Za-z]+")
+var zipPattern, _ = regexp.Compile("[0-9]{5}")
+
 var APIKey = os.Getenv("WUNDERGROUND_API_KEY")
 
 type IntOrNANString struct {
@@ -159,31 +161,35 @@ type Weather struct {
 }
 
 func GetWeather(query string) (result *Weather, err error) {
-	location := strings.SplitN(query, ",", 2)
-	if len(location) == 2 {
-		location[0] = strings.TrimSpace(location[0])
-		location[1] = strings.TrimSpace(location[1])
-	}
-
-	if len(location) != 2 ||
-		len(location[1]) != 2 ||
-		len(location[0]) > 32 || !validQuery.MatchString(location[0]) || !validQuery.MatchString(location[1]) {
-		return nil, fmt.Errorf("Query \"%s\" should be in form City, State e.g. Austin, TX", query)
-	}
 
 	var resp *http.Response
+	if cityStatePattern.MatchString(query) {
+		location := strings.SplitN(query, ",", 2)
+		if len(location) != 2 {
+			location = strings.SplitN(query, " ", 2)
+		}
+		location[0] = strings.TrimSpace(location[0])
+		location[1] = strings.TrimSpace(location[1])
 
-	if resp, err = http.Get(
-		fmt.Sprintf(
-			"https://api.wunderground.com/api/%s/conditions/q/%s/%s.json",
-			APIKey,
-			location[1],
-			location[0])); err != nil {
-		return nil, err
+		if resp, err = http.Get(
+			fmt.Sprintf(
+				"https://api.wunderground.com/api/%s/conditions/q/%s/%s.json",
+				APIKey,
+				location[1],
+				location[0])); err != nil {
+			return nil, err
+		}
+	} else if zipPattern.MatchString(query) {
+		if resp, err = http.Get(
+			fmt.Sprintf(
+				"https://api.wunderground.com/api/%s/conditions/q/%s.json",
+				APIKey,
+				query)); err != nil {
+			return nil, err
+		}
+
 	}
-
 	output := new(Weather)
-
 	decoder := json.NewDecoder(resp.Body)
 	if err = decoder.Decode(output); err != nil {
 		return nil, err
