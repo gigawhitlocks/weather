@@ -11,8 +11,8 @@ import (
 	"strings"
 )
 
-var cityStatePattern, _ = regexp.Compile("[A-Za-z]+,?[ \t]+[A-Za-z]+")
-var zipPattern, _ = regexp.Compile("[0-9]{5}")
+var CityStatePattern, _ = regexp.Compile("[A-Za-z]+,?[ \t]+[A-Za-z]+")
+var ZipPattern, _ = regexp.Compile("[0-9]{5}")
 
 var APIKey = os.Getenv("WUNDERGROUND_API_KEY")
 
@@ -264,17 +264,24 @@ func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
 
 }
 
+func CleanCityState(query string) []string {
+	location := strings.SplitN(query, ",", 2)
+	if len(location) != 2 {
+		location = strings.SplitN(query, " ", 2)
+	}
+	location[0] = strings.TrimSpace(location[0])
+	location[1] = strings.TrimSpace(location[1])
+
+	return location
+}
+
 func GetWeather(query string) (result *Weather, err error) {
 
 	// results := make(chan interface{})
 	// var resp *http.Response
-	if cityStatePattern.MatchString(query) {
-		location := strings.SplitN(query, ",", 2)
-		if len(location) != 2 {
-			location = strings.SplitN(query, " ", 2)
-		}
-		location[0] = strings.TrimSpace(location[0])
-		location[1] = strings.TrimSpace(location[1])
+	if CityStatePattern.MatchString(query) {
+
+		location := CleanCityState(query)
 		cc := fmt.Sprintf(
 			"https://api.wunderground.com/api/%s/conditions/q/%s/%s.json",
 			APIKey,
@@ -288,7 +295,7 @@ func GetWeather(query string) (result *Weather, err error) {
 			location[0])
 
 		return getWeather(cc, forecast)
-	} else if zipPattern.MatchString(query) {
+	} else if ZipPattern.MatchString(query) {
 		cc := fmt.Sprintf(
 			"https://api.wunderground.com/api/%s/conditions/q/%s.json",
 			APIKey,
