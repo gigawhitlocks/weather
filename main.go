@@ -44,7 +44,7 @@ func main() {
 				fmt.Fprintf(w, "%s", err)
 			}
 
-			fmt.Fprintf(w, "%s", result)
+			fmt.Fprintf(w, "%s", result.String())
 
 		}
 	})

@@ -135,20 +135,20 @@ type ObservationLocation struct {
 }
 
 func (w *CurrentConditions) String() string {
-	t := template.New("currentConditions")
+	t := template.New("CurrentConditions")
 	t, _ = t.Parse(`Current Weather For {{.DisplayLocation.Full}}
 Observatory: {{.ObservationLocation.Full}}
 {{.CurrentObservation.ObservationTime}}
 Conditions: {{.Weather}}
-Temperature: {{.TemperatureString}} ({{.FeelslikeString}})
+Temperature: {{.TemperatureString}} feels like {{.FeelslikeString}}
 Relative humidity: {{.RelativeHumidity}}
-{{ if NAN not in .HeatIndexString }} Heat index: {{.HeatIndexString}} {{end}}
 Wind speed: {{.WindString}}
-{{ if NAN not in .WindchillString }} Wind chill: {{.WindchillString}} {{end}}
 Precipitation in the last hour: {{.Precip1hrIn}} m
 Dewpoint: {{.DewpointString}}
 `)
 
+	// {{ if NAN not in .HeatIndexString }} Heat index: {{.HeatIndexString}} {{end}}
+	// {{ if NAN not in .WindchillString }} Wind chill: {{.WindchillString}} {{end}}
 	buf := new(bytes.Buffer)
 	t.Execute(buf, w)
 
@@ -183,23 +183,18 @@ type forecast struct {
 }
 
 func (w *Weather) String() string {
-	t := template.New("weather")
-	t, _ = t.Parse(`{{.CurrentConditions}}
+	return fmt.Sprintf("%s\n%s",
+		w.CurrentConditions.String(),
+		w.Forecast.String())
 
-{{.Forecast}}`)
-
-	buf := new(bytes.Buffer)
-	t.Execute(buf, w)
-
-	return buf.String()
 }
 func (f *Forecast) String() string {
+	today := f.ForecastDay[0]
 	t := template.New("forecast")
-	t, _ = t.Parse(`{{.ForecastDay[0]}}`)
-
+	t, _ = t.Parse(`{{ .Fcttext }}
+{{.Pop}}% chance of precipitation`)
 	buf := new(bytes.Buffer)
-	t.Execute(buf, f)
-
+	t.Execute(buf, today)
 	return buf.String()
 }
 
@@ -222,7 +217,28 @@ func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
 				results <- err
 				return
 			}
-			results <- resp
+
+			if strings.Contains(url, "conditions") {
+				w := new(CurrentConditions)
+				decoder := json.NewDecoder(resp.Body)
+				if err = decoder.Decode(w); err != nil {
+					results <- err
+				}
+
+				results <- w
+
+			} else if strings.Contains(url, "forecast") {
+				w := new(Forecast)
+				decoder := json.NewDecoder(resp.Body)
+				if err = decoder.Decode(w); err != nil {
+					results <- err
+				}
+
+				results <- w
+			} else {
+				results <- fmt.Errorf("Bad URL?")
+			}
+
 		}(url)
 	}
 
@@ -233,21 +249,16 @@ func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
 		switch r := r.(type) {
 		case error:
 			return nil, r.(error)
-		case *http.Response:
-			var w interface{}
-			decoder := json.NewDecoder(r.Body)
-			if err = decoder.Decode(w); err != nil {
-				return nil, err
-			}
-
-			switch o := w.(type) {
-			case CurrentConditions:
-				currCond = &o
-			case Forecast:
-				forecast = &o
-			}
+		case *CurrentConditions:
+			currCond = r
+		case *Forecast:
+			forecast = r
+		default:
+			return nil, fmt.Errorf("Couldn't decode %+v", &r)
 		}
+
 	}
+
 	return &Weather{
 		CurrentConditions: *currCond,
 		Forecast:          *forecast,
