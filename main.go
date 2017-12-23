@@ -22,7 +22,8 @@ func main() {
 		q := r.URL.Query().Get("zip")
 		q = strings.TrimPrefix(q, "!")
 
-		if strings.HasPrefix(q, "nws") {
+		switch {
+		case strings.HasPrefix(q, "nws"):
 			var result *nws.Result
 			zip := strings.TrimSpace(strings.TrimPrefix(q, "nws"))
 			if len(zip) != 5 {
@@ -35,9 +36,7 @@ func main() {
 			}
 			fmt.Fprintf(w, "%s", result)
 			return
-		}
-
-		if strings.HasPrefix(q, "weather") {
+		case strings.HasPrefix(q, "weather"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "weather"))
 			var result *wunderground.Weather
 			if result, err = wunderground.GetWeather(query); err != nil {
@@ -45,6 +44,10 @@ func main() {
 			}
 
 			fmt.Fprintf(w, "%s", result.String())
+			return
+		case strings.HasPrefix("q", "forecast"):
+		default:
+			fmt.Fprintf(w, "%s", "Invalid command")
 
 		}
 	})

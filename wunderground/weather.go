@@ -204,39 +204,41 @@ type Weather struct {
 	Forecast
 }
 
+func (c *CurrentConditions) Get(url string, results chan interface{}) {
+	var resp *http.Response
+	var err error
+	if resp, err = http.Get(url); err != nil {
+		results <- err
+		return
+	}
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(c); err != nil {
+		results <- err
+	}
+
+	results <- c
+}
+
+func (f *Forecast) Get(url string, results chan interface{}) {
+	var resp *http.Response
+	var err error
+	if resp, err = http.Get(url); err != nil {
+		results <- err
+		return
+	}
+	decoder := json.NewDecoder(resp.Body)
+	if err := decoder.Decode(f); err != nil {
+		results <- err
+	}
+
+	results <- f
+
+}
+
 func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
 	results := make(chan interface{})
-	for _, url := range []string{currentConditions, forecastURL} {
-		go func(url string) {
-			var resp *http.Response
-			if resp, err = http.Get(url); err != nil {
-				results <- err
-				return
-			}
-
-			if strings.Contains(url, "conditions") {
-				w := new(CurrentConditions)
-				decoder := json.NewDecoder(resp.Body)
-				if err = decoder.Decode(w); err != nil {
-					results <- err
-				}
-
-				results <- w
-
-			} else if strings.Contains(url, "forecast") {
-				w := new(Forecast)
-				decoder := json.NewDecoder(resp.Body)
-				if err = decoder.Decode(w); err != nil {
-					results <- err
-				}
-
-				results <- w
-			} else {
-				results <- fmt.Errorf("Bad URL?")
-			}
-
-		}(url)
-	}
+	go new(Forecast).Get(forecastURL, results)
+	go new(CurrentConditions).Get(currentConditions, results)
 
 	var currCond *CurrentConditions
 	var forecast *Forecast
