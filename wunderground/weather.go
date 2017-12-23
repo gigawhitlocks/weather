@@ -136,15 +136,11 @@ type ObservationLocation struct {
 
 func (w *CurrentConditions) String() string {
 	t := template.New("CurrentConditions")
-	t, _ = t.Parse(`Current Weather For {{.DisplayLocation.Full}}
-Observatory: {{.ObservationLocation.Full}}
-{{.CurrentObservation.ObservationTime}}
-Conditions: {{.Weather}}
-Temperature: {{.TemperatureString}} feels like {{.FeelslikeString}}
-Relative humidity: {{.RelativeHumidity}}
-Wind speed: {{.WindString}}
-Precipitation in the last hour: {{.Precip1hrIn}} m
-Dewpoint: {{.DewpointString}}
+	t, _ = t.Parse(`From {{.ObservationLocation.Full}}
+{{.CurrentObservation.ObservationTime}} it was {{.Weather}}
+Temperature was {{.TemperatureString}}; felt like {{.FeelslikeString}}
+with relative humidity {{.RelativeHumidity}}, Wind {{.WindString}}, and {{.Precip1hrIn}} m of precipitation in the last hour.
+Dewpoint {{.DewpointString}}
 `)
 
 	// {{ if NAN not in .HeatIndexString }} Heat index: {{.HeatIndexString}} {{end}}
