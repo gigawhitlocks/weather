@@ -134,17 +134,17 @@ type ObservationLocation struct {
 	Elevation      string `json:"elevation"`
 }
 
-func (w *Weather) String() string {
-	t := template.New("weather")
+func (w *CurrentConditions) String() string {
+	t := template.New("currentConditions")
 	t, _ = t.Parse(`Current Weather For {{.DisplayLocation.Full}}
 Observatory: {{.ObservationLocation.Full}}
 {{.CurrentObservation.ObservationTime}}
 Conditions: {{.Weather}}
-Temperature: {{.TemperatureString}}
+Temperature: {{.TemperatureString}} ({{.FeelslikeString}})
 Relative humidity: {{.RelativeHumidity}}
-Heat index: {{.HeatIndexString}}
+{{ if NAN not in .HeatIndexString }} Heat index: {{.HeatIndexString}} {{end}}
 Wind speed: {{.WindString}}
-Wind chill: {{.WindchillString}}
+{{ if NAN not in .WindchillString }} Wind chill: {{.WindchillString}} {{end}}
 Precipitation in the last hour: {{.Precip1hrIn}} m
 Dewpoint: {{.DewpointString}}
 `)
@@ -155,14 +155,110 @@ Dewpoint: {{.DewpointString}}
 	return buf.String()
 }
 
-type Weather struct {
+// CurrentConditions is the outer type for the current conditions API endpoint
+type CurrentConditions struct {
 	ResponseMetadata   `json:"response"`
 	CurrentObservation `json:"current_observation"`
 }
 
+// ForecastDay comes from the Forecast API and represents one day
+type ForecastDay struct {
+	Period        int32  `json:"period"`
+	Icon          string `json:"icon"`
+	IconUrl       string `json:"icon_url"`
+	Title         string `json:"title"`
+	Fcttext       string `json:"fcttext"`
+	FcttextMetric string `json:"fcttext_metric"`
+	Pop           string `json:"pop"`
+}
+
+// TxtForecast is a collection of metadta and ForecastDays representing a week of Forecast API data
+type TxtForecast struct {
+	Date        string        `json:"date"`
+	ForecastDay []ForecastDay `json:"forecastday"`
+}
+
+type forecast struct {
+	TxtForecast `json:"txt_forecast"`
+}
+
+func (w *Weather) String() string {
+	t := template.New("weather")
+	t, _ = t.Parse(`{{.CurrentConditions}}
+
+{{.Forecast}}`)
+
+	buf := new(bytes.Buffer)
+	t.Execute(buf, w)
+
+	return buf.String()
+}
+func (f *Forecast) String() string {
+	t := template.New("forecast")
+	t, _ = t.Parse(`{{.ForecastDay[0]}}`)
+
+	buf := new(bytes.Buffer)
+	t.Execute(buf, f)
+
+	return buf.String()
+}
+
+// Forecast is the outer container type for a the 5-day forecast API
+type Forecast struct {
+	forecast `json:"forecast"`
+}
+
+type Weather struct {
+	CurrentConditions
+	Forecast
+}
+
+func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
+	results := make(chan interface{})
+	for _, url := range []string{currentConditions, forecastURL} {
+		go func(url string) {
+			var resp *http.Response
+			if resp, err = http.Get(url); err != nil {
+				results <- err
+				return
+			}
+			results <- resp
+		}(url)
+	}
+
+	var currCond *CurrentConditions
+	var forecast *Forecast
+	for i := 0; i < 2; i++ {
+		r := <-results
+		switch r := r.(type) {
+		case error:
+			return nil, r.(error)
+		case *http.Response:
+			var w interface{}
+			decoder := json.NewDecoder(r.Body)
+			if err = decoder.Decode(w); err != nil {
+				return nil, err
+			}
+
+			switch o := w.(type) {
+			case CurrentConditions:
+				currCond = &o
+			case Forecast:
+				forecast = &o
+			}
+		}
+	}
+	return &Weather{
+		CurrentConditions: *currCond,
+		Forecast:          *forecast,
+	}, nil
+
+}
+
 func GetWeather(query string) (result *Weather, err error) {
 
-	var resp *http.Response
+	// results := make(chan interface{})
+	// var resp *http.Response
 	if cityStatePattern.MatchString(query) {
 		location := strings.SplitN(query, ",", 2)
 		if len(location) != 2 {
@@ -170,32 +266,32 @@ func GetWeather(query string) (result *Weather, err error) {
 		}
 		location[0] = strings.TrimSpace(location[0])
 		location[1] = strings.TrimSpace(location[1])
+		cc := fmt.Sprintf(
+			"https://api.wunderground.com/api/%s/conditions/q/%s/%s.json",
+			APIKey,
+			location[1],
+			location[0])
 
-		if resp, err = http.Get(
-			fmt.Sprintf(
-				"https://api.wunderground.com/api/%s/conditions/q/%s/%s.json",
-				APIKey,
-				location[1],
-				location[0])); err != nil {
-			return nil, err
-		}
+		forecast := fmt.Sprintf(
+			"https://api.wunderground.com/api/%s/features/forecast/q/%s/%s.json",
+			APIKey,
+			location[1],
+			location[0])
+
+		return getWeather(cc, forecast)
 	} else if zipPattern.MatchString(query) {
-		if resp, err = http.Get(
-			fmt.Sprintf(
-				"https://api.wunderground.com/api/%s/conditions/q/%s.json",
-				APIKey,
-				query)); err != nil {
-			return nil, err
-		}
+		cc := fmt.Sprintf(
+			"https://api.wunderground.com/api/%s/conditions/q/%s.json",
+			APIKey,
+			query)
 
-	} else {
-		return nil, fmt.Errorf("Query malformed; provide ZIP or City, St.")
-	}
-	output := new(Weather)
-	decoder := json.NewDecoder(resp.Body)
-	if err = decoder.Decode(output); err != nil {
-		return nil, err
+		forecast := fmt.Sprintf(
+			"https://api.wunderground.com/api/%s/features/forecast/q/%s.json",
+			APIKey, query)
+
+		return getWeather(cc, forecast)
+
 	}
 
-	return output, nil
+	return nil, fmt.Errorf("Query malformed; provide ZIP or City, St.")
 }
