@@ -14,7 +14,7 @@ import (
 )
 
 type zipCode string
-type latLong [2]float64
+type LatLong [2]float64
 type Result struct {
 	BarometricPressure    float32
 	Conditions            string
@@ -107,7 +107,7 @@ func (n *NWSRequest) Do() (*http.Response, error) {
 	return n.Client.Do(n.Request)
 }
 
-var zipMap map[zipCode]latLong = readZips()
+var zipMap map[zipCode]LatLong = readZips()
 
 func toFahrenheit(in float32) string {
 	return fmt.Sprintf("%.1f", in*1.8+32)
@@ -117,15 +117,15 @@ func toInchesHg(pascals float32) float32 {
 	return pascals / 3386.38866
 }
 
-func zipToLatLong(z zipCode) (latLong, error) {
+func ZipToLatLong(z zipCode) (LatLong, error) {
 	if l, ok := zipMap[z]; ok {
 		return l, nil
 	}
-	return latLong{}, fmt.Errorf("zip code not found")
+	return LatLong{}, fmt.Errorf("zip code not found")
 }
 
-func readZips() map[zipCode]latLong {
-	var zipMap = make(map[zipCode]latLong)
+func readZips() map[zipCode]LatLong {
+	var zipMap = make(map[zipCode]LatLong)
 	ziptext, err := ioutil.ReadFile("zip-data.csv")
 	if err != nil {
 		fmt.Println("no file")
@@ -148,7 +148,7 @@ func readZips() map[zipCode]latLong {
 			s, _ := strconv.ParseFloat(record, 64)
 			return s
 		}
-		zipMap[zipCode(record[0])] = latLong([2]float64{
+		zipMap[zipCode(record[0])] = LatLong([2]float64{
 			convFloat(record[1]),
 			convFloat(record[2])})
 	}
@@ -156,7 +156,7 @@ func readZips() map[zipCode]latLong {
 }
 
 func stationsFromZip(z zipCode) (output *StationList, err error) {
-	l, err := zipToLatLong(z)
+	l, err := ZipToLatLong(z)
 	if err != nil {
 		return nil, err
 	}

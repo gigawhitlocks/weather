@@ -3,11 +3,15 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"image"
+	"image/png"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gigawhitlocks/weather/nws"
+	"github.com/gigawhitlocks/weather/openweathermap"
 	"github.com/gigawhitlocks/weather/wunderground"
 )
 
@@ -81,6 +85,33 @@ func main() {
 			}
 
 			fmt.Fprintf(w, "%s", strings.Join(forecasts, "\n"))
+			return
+
+		case strings.HasPrefix(q, "satellite"):
+			query := strings.TrimSpace(strings.TrimPrefix(q, "satellite"))
+			var err error
+			var result *image.Image
+			if result, err = openweathermap.GetSatellite(query); err != nil {
+				fmt.Fprintf(w, "Bad result from OpenWeatherMap API: %s", err)
+				return
+			}
+
+			uid := fmt.Sprintf("%s%d", query, time.Now().Nanosecond())
+			path := fmt.Sprintf("satellite%s.png", uid)
+			http.HandleFunc(fmt.Sprintf("/%s", path), func(w http.ResponseWriter, r *http.Request) {
+				if err := png.Encode(w, *result); err != nil {
+					fmt.Fprintf(w, "%s", err)
+				}
+				return
+			})
+
+			if os.Getenv("DEBUG") == "1" {
+				fmt.Fprintf(w, "http://127.0.0.1:8111/%s\n", path)
+				return
+			}
+
+			fmt.Fprintf(w, "https://shouting.online/weather/%s", path)
+			return
 
 		default:
 			fmt.Fprintf(w, "%s", "Invalid command")
