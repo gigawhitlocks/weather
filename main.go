@@ -98,7 +98,7 @@ func main() {
 
 			uid := fmt.Sprintf("%s%d", query, time.Now().Nanosecond())
 			path := fmt.Sprintf("satellite%s.png", uid)
-			if !(os.Getenv("DEBUG") == "1") {
+			if os.Getenv("DEBUG") != "1" {
 				path = fmt.Sprintf("weather/%s", path)
 			}
 
