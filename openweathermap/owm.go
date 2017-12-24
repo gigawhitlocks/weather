@@ -7,6 +7,7 @@ import (
 	"image/png"
 	"math"
 	"net/http"
+	"os"
 	"regexp"
 )
 
@@ -32,15 +33,16 @@ func tileNumbers(lat, long float64, zoom int) (int, int) {
 	return xtile, ytile
 }
 
+var APIKEY = os.Getenv("OWM_API_KEY")
+
 func GetSatellite(query string) (*image.Image, error) {
 	var err error
 	var url string
 
 	switch {
-	// case CityStatePattern.MatchString(query):
-	// url = fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?q=%s&appid=bdedb4052d36b03e61a5768dfdaff8a5", query)
 	case ZipPattern.MatchString(query):
-		url = fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?zip=%s,us&appid=bdedb4052d36b03e61a5768dfdaff8a5", query)
+		url = fmt.Sprintf("https://api.openweathermap.org/data/2.5/weather?zip=%s,us&appid=%s",
+			query, APIKEY)
 	default:
 		return nil, fmt.Errorf("ah shit")
 
@@ -59,10 +61,7 @@ func GetSatellite(query string) (*image.Image, error) {
 
 	zoom := 12
 	xtile, ytile := tileNumbers(c.Lat, c.Long, zoom)
-	// s := fmt.Sprintf("https://tile.openweathermap.org/map/precipitation_new/%d/%d/%d.png?appid=bdedb4052d36b03e61a5768dfdaff8a5", zoom, xtile, ytile)
-	// s = fmt.Sprintf("%s\nhttps://sat.owm.io/sql/%d/%d/%d?APPID=bdedb4052d36b03e61a5768dfdaff8a5&op=rgb&from=l8&select=b4,b3,b2&order=first", s, zoom, xtile, ytile)
-	// https: //{s}.sat.owm.io/sql/{z}/{x}/{y}?appid={APIKEY}&op=rgb&from=s2&select=b4,b3,b2&order=best
-	s := fmt.Sprintf("https://sat.owm.io/sql/%d/%d/%d?APPID=bdedb4052d36b03e61a5768dfdaff8a5&op=rgb&from=s2&select=b4,b3,b2&order=best", zoom, xtile, ytile)
+	s := fmt.Sprintf("https://sat.owm.io/sql/%d/%d/%d?APPID=%s&op=rgb&from=s2&select=b4,b3,b2&order=best", zoom, xtile, ytile, APIKEY)
 
 	if resp, err = http.Get(s); err != nil {
 		return nil, err
