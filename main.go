@@ -13,10 +13,13 @@ import (
 	"github.com/gigawhitlocks/weather/nws"
 	"github.com/gigawhitlocks/weather/openweathermap"
 	"github.com/gigawhitlocks/weather/wunderground"
+
+	"golang.org/x/sync/syncmap"
 )
 
 func main() {
 
+	var imagestore = new(syncmap.Map)
 	if len(wunderground.APIKey) == 0 {
 		fmt.Println("Set WUNDERGROUND_API_KEY to your Wunderground API key")
 		os.Exit(1)
@@ -87,6 +90,21 @@ func main() {
 			fmt.Fprintf(w, "%s", strings.Join(forecasts, "\n"))
 			return
 
+		case strings.HasSuffix(q, ".png"):
+			i, ok := imagestore.Load(q)
+			if !ok {
+				fmt.Fprintf(w, "%s", fmt.Errorf("Not ok"))
+				return
+			}
+			w.Header().Set("Content-Type", "image/png")
+			switch i := i.(type) {
+			case *image.Image:
+				if err := png.Encode(w, *i); err != nil {
+					fmt.Fprintf(w, "%s", err)
+					return
+				}
+			}
+			return
 		case strings.HasPrefix(q, "satellite"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "satellite"))
 			var err error
@@ -97,22 +115,19 @@ func main() {
 			}
 
 			uid := fmt.Sprintf("%s%d", query, time.Now().Nanosecond())
-			path := fmt.Sprintf("satellite%s", uid)
-			http.HandleFunc(fmt.Sprintf("/%s", path), func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Content-Type", "image/png")
-				if err := png.Encode(w, *result); err != nil {
-					fmt.Fprintf(w, "%s", err)
-				}
-				return
-			})
+			imagestore.Store(fmt.Sprintf("satellite%s.png", uid), result)
 
+			path := fmt.Sprintf("?zip=satellite%s.png", uid)
+
+			// links to click
 			if os.Getenv("DEBUG") == "1" {
 				fmt.Fprintf(w, "http://127.0.0.1:8111/%s\n", path)
 				return
 			}
 
-			path = fmt.Sprintf("weather/%s", path)
+			path = fmt.Sprintf("weather/?%s", path)
 			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
+
 			return
 
 		default:
