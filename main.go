@@ -125,7 +125,7 @@ func main() {
 				return
 			}
 
-			path = fmt.Sprintf("weather/?%s", path)
+			path = fmt.Sprintf("weather/%s", path)
 			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
 
 			return
