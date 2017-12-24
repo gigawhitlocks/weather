@@ -115,7 +115,7 @@ func main() {
 				return
 			}
 
-			fmt.Fprintf(w, "https://shouting.online/%s", path)
+			fmt.Fprintf(w, "https://shouting.online/weather/%s", path)
 			return
 
 		default:
