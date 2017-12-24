@@ -98,10 +98,6 @@ func main() {
 
 			uid := fmt.Sprintf("%s%d", query, time.Now().Nanosecond())
 			path := fmt.Sprintf("satellite%s.png", uid)
-			if os.Getenv("DEBUG") != "1" {
-				path = fmt.Sprintf("weather/%s", path)
-			}
-
 			http.HandleFunc(fmt.Sprintf("/%s", path), func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "image/png")
 				if err := png.Encode(w, *result); err != nil {
@@ -115,7 +111,8 @@ func main() {
 				return
 			}
 
-			fmt.Fprintf(w, "https://shouting.online/weather/%s", path)
+			path = fmt.Sprintf("weather/%s", path)
+			fmt.Fprintf(w, "https://shouting.online/%s", path)
 			return
 
 		default:
