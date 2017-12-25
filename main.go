@@ -98,8 +98,8 @@ func main() {
 			}
 			w.Header().Set("Content-Type", "image/png")
 			switch i := i.(type) {
-			case *image.Image:
-				if err := png.Encode(w, *i); err != nil {
+			case *image.NRGBA:
+				if err := png.Encode(w, i); err != nil {
 					fmt.Fprintf(w, "%s", err)
 					return
 				}
@@ -108,7 +108,7 @@ func main() {
 		case strings.HasPrefix(q, "satellite"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "satellite"))
 			var err error
-			var result *image.Image
+			var result *image.NRGBA
 			if result, err = openweathermap.GetSatellite(query); err != nil {
 				fmt.Fprintf(w, "Bad result from OpenWeatherMap API: %s", err)
 				return
