@@ -46,6 +46,10 @@ func main() {
 			return
 		case strings.HasPrefix(q, "weather"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "weather"))
+			if query == "" {
+				help(w)
+				return
+			}
 			var result *wunderground.Weather
 			if result, err = wunderground.GetWeather(query); err != nil {
 				fmt.Fprintf(w, "%s", err)
@@ -55,6 +59,10 @@ func main() {
 			return
 		case strings.HasPrefix(q, "forecast"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "forecast"))
+			if query == "" {
+				help(w)
+				return
+			}
 			var url string
 			if wunderground.CityStatePattern.MatchString(query) {
 				location := wunderground.CleanCityState(query)
@@ -160,10 +168,14 @@ func main() {
 
 			return
 		default:
-			fmt.Fprintf(w, "%s", "*Commands:*\n\n`!nws`: get a weather report from the NWS's public data source. Use a zip code, expect results to be from airports.\n`!weather`: get the current weather and today's forcast. Use `zip` or `city, state` e.g. `!weather 78703` or `!weather san francisco, ca`\n`!forecast: short-term forecast by zip or city, state`\n`!precip` get a precipitation map of the region centered on provided zip\n`!satellite` get a recent (as old as a week) satellite of a region centered on a zip")
-
+			help(w)
+			return
 		}
 	})
 
 	fmt.Printf("%s", http.ListenAndServe("0.0.0.0:8111", nil))
+}
+
+func help(w http.ResponseWriter) {
+	fmt.Fprintf(w, "%s", "*Commands:*\n\n`!nws`: get a weather report from the NWS's public data source. Use a zip code, expect results to be from airports.\n`!weather`: get the current weather and today's forcast. Use `zip` or `city, state` e.g. `!weather 78703` or `!weather san francisco, ca`\n`!forecast: short-term forecast by zip or city, state`\n`!precip` get a precipitation map of the region centered on provided zip\n`!satellite` get a recent (as old as a week) satellite of a region centered on a zip")
 }
