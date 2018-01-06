@@ -4,12 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"image"
+	"image/gif"
 	"image/png"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/gigawhitlocks/weather/gfs"
 	"github.com/gigawhitlocks/weather/nws"
 	"github.com/gigawhitlocks/weather/openweathermap"
 	"github.com/gigawhitlocks/weather/wunderground"
@@ -98,6 +100,22 @@ func main() {
 			fmt.Fprintf(w, "%s", strings.Join(forecasts, "\n"))
 			return
 
+		case strings.HasSuffix(q, ".gif"):
+			i, ok := imagestore.Load(q)
+			if !ok {
+				fmt.Fprintf(w, "%s", fmt.Errorf("Not ok"))
+				return
+			}
+			w.Header().Set("Content-Type", "image/gif")
+			switch i := i.(type) {
+			case *gif.GIF:
+				if err := gif.EncodeAll(w, i); err != nil {
+					fmt.Fprintf(w, "%s", err)
+					return
+				}
+			}
+			return
+
 		case strings.HasSuffix(q, ".png"):
 			i, ok := imagestore.Load(q)
 			if !ok {
@@ -113,6 +131,7 @@ func main() {
 				}
 			}
 			return
+
 		case strings.HasPrefix(q, "satellite"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "satellite"))
 			var err error
@@ -167,6 +186,25 @@ func main() {
 			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
 
 			return
+
+		case strings.HasPrefix(q, "map"):
+			query := strings.TrimSpace(strings.TrimPrefix(q, "map"))
+
+			result := gfs.Do(query)
+			imagestore.Store(fmt.Sprintf("%sus.gif", query), result)
+			path := fmt.Sprintf("?zip=%sus.gif", query)
+
+			// links to click
+			if os.Getenv("DEBUG") == "1" {
+				fmt.Fprintf(w, "http://127.0.0.1:8111/%s\n", path)
+				return
+			}
+
+			path = fmt.Sprintf("weather%s", path)
+			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
+
+			return
+
 		default:
 			help(w)
 			return
