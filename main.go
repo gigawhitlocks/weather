@@ -191,8 +191,9 @@ func main() {
 			query := strings.TrimSpace(strings.TrimPrefix(q, "map"))
 
 			result := gfs.Do(query)
-			imagestore.Store(fmt.Sprintf("%sus.gif", query), result)
-			path := fmt.Sprintf("?zip=%sus.gif", query)
+			uid := fmt.Sprintf("%s%d", query, time.Now().Nanosecond())
+			imagestore.Store(fmt.Sprintf("%sus.gif", uid), result)
+			path := fmt.Sprintf("?zip=%sus.gif", uid)
 
 			// links to click
 			if os.Getenv("DEBUG") == "1" {
