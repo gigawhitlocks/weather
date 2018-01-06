@@ -49,15 +49,29 @@ func region(in string) string {
 
 func Do(input string) *gif.GIF {
 	date := fmt.Sprintf("%s", time.Now().Format("20060102"))
+	hour := time.Now().Hour()
+	var h string
+	if hour < 6 {
+		h = "00"
+	} else if hour < 12 {
+		h = "06"
+	} else if hour < 18 {
+		h = "12"
+	} else {
+		h = "18"
+	}
+
 	region := region(input)
 	frames := make(chan *Frame)
 	for i := 1; i < numFrames+1; i++ {
 		go func(n int) {
+			var r *http.Response
+			var err error
 			url := fmt.Sprintf(
-				"https://www.tropicaltidbits.com/analysis/models/gfs/%s00/gfs_mslp_pcpn_frzn_%sus_%d.png",
-				date, region, n)
+				"https://www.tropicaltidbits.com/analysis/models/gfs/%s%s/gfs_mslp_pcpn_frzn_%sus_%d.png",
+				date, h, region, n)
 			fmt.Printf("%s\n", url)
-			r, err := http.Get(url)
+			r, err = http.Get(url)
 			if err != nil {
 				return
 			}
