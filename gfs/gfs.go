@@ -32,6 +32,7 @@ var validQueries = map[string]string{
 	southCent:       southCent,
 	southEast:       southEast,
 	southWest:       southWest,
+	"midwest":       northCent,
 	"southwest":     southWest,
 	"southeast":     southEast,
 	"northwest":     northWest,
