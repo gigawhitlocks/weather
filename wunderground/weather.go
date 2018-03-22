@@ -142,7 +142,7 @@ func (w *CurrentConditions) String() string {
 	t, _ = t.Parse(`From {{.ObservationLocation.Full}}
 {{.CurrentObservation.ObservationTime}} it was {{.Weather}}
 Temperature was {{.TemperatureString}}; felt like {{.FeelslikeString}}
-with relative humidity {{.RelativeHumidity}}, Wind {{.WindString}}, and {{.Precip1hrIn}}\" of precipitation in the last hour.
+with relative humidity {{.RelativeHumidity}}, Wind {{.WindString}}, and {{.Precip1hrIn}}" of precipitation in the last hour.
 Dewpoint {{.DewpointString}}
 `)
 
