@@ -289,7 +289,7 @@ func GetRadar(query string) (result *gif.GIF) {
 	// http://api.wunderground.com/api/17234af6deee4427/radar/q/KS/Topeka.gif?width=280&height=280&newmaps=1
 
 	url := fmt.Sprintf(
-		"https://api.wunderground.com/api/%s/animatedradar/q/%s/%s.gif?width=300&height=300&newmaps=1",
+		"https://api.wunderground.com/api/%s/animatedradar/q/%s/%s.gif?width=400&height=400&newmaps=1",
 		APIKey,
 		location[1],
 		location[0])
