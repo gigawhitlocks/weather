@@ -102,7 +102,4 @@ func Do(input string) *gif.GIF {
 	}
 
 	return o
-	// if err = gif.EncodeAll(f, o); err != nil {
-	// 	panic(err)
-	// }
 }

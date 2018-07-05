@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"image/gif"
 	"net/http"
 	"os"
 	"regexp"
@@ -235,7 +236,6 @@ func (f *Forecast) Get(url string, results chan interface{}) {
 	}
 
 	results <- f
-
 }
 
 func getWeather(currentConditions, forecastURL string) (w *Weather, err error) {
@@ -276,6 +276,33 @@ func CleanCityState(query string) []string {
 	location[1] = strings.TrimSpace(location[1])
 
 	return location
+}
+
+func GetRadar(query string) (result *gif.GIF) {
+
+	if !CityStatePattern.MatchString(query) {
+		return nil
+	}
+	fmt.Printf("%s\n", query)
+
+	location := CleanCityState(query)
+	// http://api.wunderground.com/api/17234af6deee4427/radar/q/KS/Topeka.gif?width=280&height=280&newmaps=1
+
+	url := fmt.Sprintf(
+		"https://api.wunderground.com/api/%s/animatedradar/q/%s/%s.gif?width=300&height=300&newmaps=1",
+		APIKey,
+		location[1],
+		location[0])
+
+	var resp *http.Response
+	var err error
+	if resp, err = http.Get(url); err != nil {
+		return nil
+	}
+	if result, err = gif.DecodeAll(resp.Body); err != nil {
+		return nil
+	}
+	return
 }
 
 func GetWeather(query string) (result *Weather, err error) {

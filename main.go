@@ -191,6 +191,28 @@ func main() {
 
 			return
 
+		case strings.HasPrefix(q, "radar"):
+			query := strings.TrimSpace(strings.TrimPrefix(q, "radar"))
+
+			result := wunderground.GetRadar(query)
+			if result == nil {
+				return
+			}
+			uid := fmt.Sprintf("%d", time.Now().Nanosecond())
+			imagestore.Store(fmt.Sprintf("%sus.gif", uid), result)
+			path := fmt.Sprintf("?zip=%sus.gif", uid)
+
+			// links to click
+			if os.Getenv("DEBUG") == "1" {
+				fmt.Fprintf(w, "http://127.0.0.1:8111/%s\n", path)
+				return
+			}
+
+			path = fmt.Sprintf("weather%s", path)
+			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
+
+			return
+
 		case strings.HasPrefix(q, "map"):
 			query := strings.TrimSpace(strings.TrimPrefix(q, "map"))
 
