@@ -1,3 +1,8 @@
+# DEPRECATED
+## The bulk of the functionality for this integration was provided via the wunderground API, which was discontinued at the end of 2018. Additional functionality provided through OpenWeatherMap has also degraded due to unannounced changes in the upstream API there as well. This leaves limited functionality from scraping tropicaltidbits and the National Weather Service's limited API, but the nonfunctional bits need to be removed in order for this to be a usable integration and that will be a nontrivial amount of work.
+
+## I do plan to update this integration to use a new upstream API but it will probably not be soon.
+
 a simple weather integration for rocket chat, written in go
 
 download the binary, run it on your rocket chat server, point an integration at it
