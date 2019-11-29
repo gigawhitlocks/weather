@@ -1,12 +1,24 @@
-* DEPRECATED
+* Weather API Experiment Junkyard
 
-The bulk of the functionality for this integration was provided via the wunderground API, which was discontinued at the end of 2018. Additional functionality provided through OpenWeatherMap has also degraded due to unannounced changes in the upstream API there as well. This leaves limited functionality from scraping tropicaltidbits and the National Weather Service's limited API, but the nonfunctional bits need to be removed in order for this to be a usable integration and that will be a nontrivial amount of work
+This repository holds remnants of an old Weather Underground integration for RocketChat and at least one usable module.
 
-I do plan to update this integration to use a new upstream API but it will probably not be soon.
+** ROADMAP
 
-** a simple weather integration for rocket chat, written in go
+I tend to play with a lot of weather APIs and data and I will continue to use this repository to hold libraries I write in Go related to that goal. I am looking into writing a DarkSky module and something to solve the geocoding problem.
 
-download the binary, run it on your rocket chat server, point an integration at it
+** WORKING
+
+The ~nws/~ folder holds an ~nws~ module that can be used for querying the National Weather Service for current conditions. This was my first iteration before adopting the Wunderground API and it still works. It can be imported as ~github.com/gigawhitlocks/weather/nws~ and is usable.
+
+The ~gfs/~ folder might hold some code that can assemble gifs from images on tropicaltidbits.com but I haven't dug in to see what still works.
+
+** REMOVED
+
+The Wunderground API was shut down in late 2018 and the core functionality of this plugin stopped working. I have also stopped using RocketChat. Thus, the parts of the repository supporting RocketChat and Wunderground have been removed.
+
+** ARCHIVED
+
+I have saved some screenshots of the old behavior below, for posterity. This repository will no longer be used for chat-related functionality, and will instead contain only weather-related functionality. [[The chatbot-like features have been moved to a Mattermost plugin][https://github.com/gigawhitlocks/mattermost-national-weather-service-plugin]].
 
 [[file:./screenshots/Screenshot_2017-12-23_02-12-44.png]]
 
