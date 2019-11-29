@@ -18,7 +18,7 @@ The Wunderground API was shut down in late 2018 and the core functionality of th
 
 ** ARCHIVED
 
-I have saved some screenshots of the old behavior below, for posterity. This repository will no longer be used for chat-related functionality, and will instead contain only weather-related functionality. [[The chatbot-like features have been moved to a Mattermost plugin][https://github.com/gigawhitlocks/mattermost-national-weather-service-plugin]].
+I have saved some screenshots of the old behavior below, for posterity. This repository will no longer be used for chat-related functionality, and will instead contain only weather-related functionality. [[https://github.com/gigawhitlocks/mattermost-national-weather-service-plugin][The chatbot-like features have been moved to a Mattermost plugin]].
 
 [[file:./screenshots/Screenshot_2017-12-23_02-12-44.png]]
 
