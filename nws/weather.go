@@ -8,6 +8,8 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -126,7 +128,7 @@ func ZipToLatLong(z zipCode) (LatLong, error) {
 
 func readZips() map[zipCode]LatLong {
 	var zipMap = make(map[zipCode]LatLong)
-	ziptext, err := ioutil.ReadFile("zip-data.csv")
+	ziptext, err := Asset("../zip-data.csv")
 	if err != nil {
 		fmt.Println("no file")
 	}
