@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"image"
 	"image/gif"
@@ -14,7 +13,6 @@ import (
 	"github.com/gigawhitlocks/weather/gfs"
 	"github.com/gigawhitlocks/weather/nws"
 	"github.com/gigawhitlocks/weather/openweathermap"
-	"github.com/gigawhitlocks/weather/wunderground"
 
 	"golang.org/x/sync/syncmap"
 )
@@ -22,10 +20,6 @@ import (
 func main() {
 
 	var imagestore = new(syncmap.Map)
-	if len(wunderground.APIKey) == 0 {
-		fmt.Println("Set WUNDERGROUND_API_KEY to your Wunderground API key")
-		os.Exit(1)
-	}
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		var err error
@@ -46,64 +40,6 @@ func main() {
 			}
 			fmt.Fprintf(w, "%s", result)
 			return
-		case strings.HasPrefix(q, "weather"):
-			query := strings.TrimSpace(strings.TrimPrefix(q, "weather"))
-			if query == "" {
-				help(w)
-				return
-			}
-			var result *wunderground.Weather
-			if result, err = wunderground.GetWeather(query); err != nil {
-				fmt.Fprintf(w, "%s", err)
-			}
-
-			if result == nil {
-				return
-			}
-
-			fmt.Fprintf(w, "%s", result.String())
-			return
-		case strings.HasPrefix(q, "forecast"):
-			query := strings.TrimSpace(strings.TrimPrefix(q, "forecast"))
-			if query == "" {
-				help(w)
-				return
-			}
-			var url string
-			if wunderground.CityStatePattern.MatchString(query) {
-				location := wunderground.CleanCityState(query)
-				url = fmt.Sprintf(
-					"https://api.wunderground.com/api/%s/features/forecast/q/%s/%s.json",
-					wunderground.APIKey,
-					location[1],
-					location[0])
-			} else if wunderground.ZipPattern.MatchString(query) {
-				url = fmt.Sprintf(
-					"https://api.wunderground.com/api/%s/features/forecast/q/%s.json",
-					wunderground.APIKey, query)
-			} else {
-				fmt.Println("Invalid query string")
-				return
-			}
-			var resp *http.Response
-			if resp, err = http.Get(url); err != nil {
-				fmt.Printf("Couldn't fetch from forecast API because %s", err)
-				return
-			}
-			decoder := json.NewDecoder(resp.Body)
-
-			f := new(wunderground.Forecast)
-			if err := decoder.Decode(f); err != nil {
-				fmt.Printf("Couldn't decode JSON because %s", err)
-			}
-			var forecasts []string
-			for _, day := range f.TxtForecast.ForecastDay {
-				forecasts = append(forecasts, fmt.Sprintf("*%s*: %s", day.Title, day.Fcttext))
-			}
-
-			fmt.Fprintf(w, "%s", strings.Join(forecasts, "\n"))
-			return
-
 		case strings.HasSuffix(q, ".gif"):
 			i, ok := imagestore.Load(q)
 			if !ok {
@@ -179,28 +115,6 @@ func main() {
 			imagestore.Store(fmt.Sprintf("composite%s.png", uid), result)
 
 			path := fmt.Sprintf("?zip=composite%s.png", uid)
-
-			// links to click
-			if os.Getenv("DEBUG") == "1" {
-				fmt.Fprintf(w, "http://127.0.0.1:8111/%s\n", path)
-				return
-			}
-
-			path = fmt.Sprintf("weather%s", path)
-			fmt.Fprintf(w, "https://shouting.online/%s\n", path)
-
-			return
-
-		case strings.HasPrefix(q, "radar"):
-			query := strings.TrimSpace(strings.TrimPrefix(q, "radar"))
-
-			result := wunderground.GetRadar(query)
-			if result == nil {
-				return
-			}
-			uid := fmt.Sprintf("%d", time.Now().Nanosecond())
-			imagestore.Store(fmt.Sprintf("%sus.gif", uid), result)
-			path := fmt.Sprintf("?zip=%sus.gif", uid)
 
 			// links to click
 			if os.Getenv("DEBUG") == "1" {
