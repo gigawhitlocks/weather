@@ -250,7 +250,7 @@ func getCurrentAlerts(stationID string) (a *AlertList, err error) {
 
 func getCurrentObservation(stationID string) (o *Observation, err error) {
 	n := NewRequest(fmt.Sprintf(
-		"/stations/%s/observations/current", stationID))
+		"/stations/%s/observations/latest", stationID))
 	resp, err := n.Do()
 	defer resp.Body.Close()
 	if err != nil {
