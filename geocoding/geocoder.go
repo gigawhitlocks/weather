@@ -15,7 +15,17 @@ var ApiKey = os.Getenv("GEOCODING_KEY")
 var ApiURL = fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?key=%s", ApiKey)
 
 type Geocoder interface {
-	Geocode(location string) (lat, long float64)
+	Geocode(location string) (*Coordinates, error)
+}
+
+var _ Geocoder = &OpenCageData{}
+
+type OpenCageData struct{}
+
+func init() {
+	if ApiKey == "" {
+		panic("must provide OpenCageData API key to use this Geocoding package (export GEOCODING_KEY)")
+	}
 }
 
 type OpenCageDataGeocodeResponse struct {
@@ -154,9 +164,6 @@ type OpenCageDataGeocodeResponse struct {
 	TotalResults int `json:"total_results"`
 }
 
-type OpenCageData struct {
-}
-
 func buildQuery(query string) string {
 	return fmt.Sprintf("%s&q=%s", ApiURL, url.QueryEscape(query))
 }
@@ -196,7 +203,7 @@ func doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
 	return response, nil
 }
 
-func Geocode(location string) (*Coordinates, error) {
+func (_ *OpenCageData) Geocode(location string) (*Coordinates, error) {
 	response, err := doGeocode(location)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch lat/long for location '%s'", location)

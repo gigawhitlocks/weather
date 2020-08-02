@@ -28,7 +28,8 @@ func teardown() {
 }
 
 func TestGeocode(t *testing.T) {
-	c, err := Geocode("austin")
+	geocoder := new(OpenCageData)
+	c, err := geocoder.Geocode("austin")
 	require.NoError(t, err)
 	require.NotNil(t, c)
 	assert.Equal(t, 30.2711286, c.Latitude)
