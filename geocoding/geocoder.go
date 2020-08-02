@@ -15,7 +15,8 @@ var ApiKey = os.Getenv("GEOCODING_KEY")
 var ApiURL = fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?key=%s", ApiKey)
 
 type Geocoder interface {
-	Geocode(location string) (*Coordinates, error)
+	Latlong(location string) (*Coordinates, error)
+	ParsedLocation(location string) (string, error)
 }
 
 var _ Geocoder = &OpenCageData{}
@@ -203,7 +204,7 @@ func doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
 	return response, nil
 }
 
-func (_ *OpenCageData) Geocode(location string) (*Coordinates, error) {
+func (_ *OpenCageData) Latlong(location string) (*Coordinates, error) {
 	response, err := doGeocode(location)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch lat/long for location '%s'", location)
@@ -212,6 +213,20 @@ func (_ *OpenCageData) Geocode(location string) (*Coordinates, error) {
 		Latitude:  response.Results[0].Geometry.Lat,
 		Longitude: response.Results[0].Geometry.Lng,
 	}, nil
+}
+
+func (_ *OpenCageData) Geocode(location string) (*OpenCageDataGeocodeResponse, error) {
+	return doGeocode(location)
+}
+
+func (_ *OpenCageData) ParsedLocation(location string) (string, error) {
+	response, err := doGet(buildQuery(location))
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to fetch coordinates for location %s", location)
+	}
+
+	result := response.Results[0].Components
+	return fmt.Sprintf("%s, %s, %s", result.City, result.State, result.Country), nil
 }
 
 func Map(location string) (string, error) {
