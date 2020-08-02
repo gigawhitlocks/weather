@@ -4,7 +4,7 @@ This repository holds remnants of an old Weather Underground integration for Roc
 
 ** ROADMAP
 
-I tend to play with a lot of weather APIs and data and I will continue to use this repository to hold libraries I write in Go related to that goal. I am looking into writing a DarkSky module and something to solve the geocoding problem.
+I tend to play with a lot of weather APIs and data and I will continue to use this repository to hold libraries I write in Go related to that goal. +I am looking into writing a DarkSky module and something to solve the geocoding problem.+
 
 ** WORKING
 
