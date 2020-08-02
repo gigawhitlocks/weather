@@ -13,24 +13,21 @@ import (
 
 var apiKey = os.Getenv("WEATHER_KEY")
 var apiURL string = "https://api.climacell.co/v3"
-var geocoder geocoding.Geocoder
 
 func init() {
 	if apiKey == "" {
 		panic("must provide ClimaCell API key (export WEATHER_KEY) to use this package")
 	}
-	geocoder = new(geocoding.OpenCageData)
 }
 
 func CurrentConditions(location string) (string, error) {
-	coords, err := geocoder.Latlong(location)
+	geocoder, err := geocoding.NewOpenCageData(location)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find latitude and longitude for '%s'", location)
+		return "", errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
-	parsedLocation, err := geocoder.ParsedLocation(location)
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to parse location '%s'", location)
-	}
+	coords := geocoder.Latlong()
+	parsedLocation := geocoder.ParsedLocation()
+
 	q := buildURL("/weather/nowcast",
 		&QueryParams{
 			flags: map[string]string{
