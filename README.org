@@ -12,6 +12,10 @@ The ~nws/~ folder holds an ~nws~ module that can be used for querying the Nation
 
 The ~gfs/~ folder might hold some code that can assemble gifs from images on tropicaltidbits.com but I haven't dug in to see what still works.
 
+~geocoding~ provides a library backed by the [Open Cage Data](https://opencagedata.com/api)
+
+~climacell~ provides a package backed by the [ClimaCell](https://climacell.co) API aimed for use with my Mattermost weather plugin. It might not be very general.
+
 ** REMOVED
 
 The Wunderground API was shut down in late 2018 and the core functionality of this plugin stopped working. I have also stopped using RocketChat. Thus, the parts of the repository supporting RocketChat and Wunderground have been removed.
