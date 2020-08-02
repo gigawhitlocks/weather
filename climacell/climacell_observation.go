@@ -81,20 +81,13 @@ type ClimaCellObservation struct {
 func (c *ClimaCellObservation) String() string {
 	t, _ := template.
 		New("ClimaCellObservation").
-		Parse(`
-Temperature: {{.Temp.Value}} °{{.Temp.Units}}
-Feels Like: {{.FeelsLike.Value}} °{{.FeelsLike.Units}}
-Dewpoint: {{.Dewpoint.Value}} °{{.Dewpoint.Units}}
-Wind Gust: {{.WindGust.Value}} {{.WindGust.Units}}
-Barometric Pressure: {{.BaroPressure.Value}} {{.BaroPressure.Units}}
-Visibility: {{.Visibility.Value}} {{.Visibility.Units}}
-Precipitation: {{.Precipitation.Value}} {{.Precipitation.Units}}
-Cloud Cover: {{.CloudCover.Value}}{{.CloudCover.Units}}{{if .CloudCeiling.Value }}
-Cloud Ceiling: {{.CloudCeiling.Value}} {{.CloudCeiling.Units}} 
-{{end}}{{if .CloudBase.Value }}
-Cloud Base: {{.CloudBase.Value}}{{.CloudBase.Units}}
-{{end}}Humidity: {{.Humidity.Value}}{{.Humidity.Units}}
-Latitude and Longitude: {{.Lat}}, {{.Lon}}`)
+		Parse(
+			`| Latitude | {{.Lat}} | Longitude | {{.Lon}} |
+| Temperature | {{.Temp.Value}} °{{.Temp.Units}} | Feels Like | {{.FeelsLike.Value}} °{{.FeelsLike.Units}} |
+| Cloud Cover | {{.CloudCover.Value}}{{.CloudCover.Units}} | Precipitation | {{.Precipitation.Value}} {{.Precipitation.Units}} |
+| Wind Gust | {{.WindGust.Value}} {{.WindGust.Units}} | Barometric Pressure | {{.BaroPressure.Value}} {{.BaroPressure.Units}} |
+| Humidity | {{.Humidity.Value}}{{.Humidity.Units}} | Visibility | {{.Visibility.Value}} {{.Visibility.Units}} |
+`)
 	buffer := new(bytes.Buffer)
 	_ = t.Execute(buffer, c)
 	return buffer.String()

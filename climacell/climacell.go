@@ -75,7 +75,7 @@ func CurrentConditions(location string) (string, error) {
 	if len(cco) == 0 {
 		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
 	}
-	return fmt.Sprintf("%s:\n\n%s", parsedLocation, cco[0].String()), nil
+	return fmt.Sprintf("| Found Location  | %s | Query | %s |\n| :--- | ---: | :--- | ---: |\n%s", parsedLocation, location, cco[0].String()), nil
 }
 
 // possible weather fields

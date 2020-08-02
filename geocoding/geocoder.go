@@ -54,7 +54,25 @@ func (o *OpenCageData) Geocode(location string) (err error) {
 
 func (o *OpenCageData) ParsedLocation() string {
 	result := o.Results[0].Components
-	return fmt.Sprintf("%s, %s, %s", result.City, result.State, result.Country)
+	if result.City != "" && result.State != "" {
+		return fmt.Sprintf("%s, %s", result.City, result.State)
+	}
+	if result.City != "" && result.State == "" {
+		if result.CountryCode == "US" || result.CountryCode == "" {
+			return fmt.Sprintf("%s", result.City)
+		}
+		if result.CountryCode != "US" {
+			return fmt.Sprintf("%s, %s", result.City, result.CountryCode)
+		}
+	}
+
+	if result.State == "" {
+		return result.Country
+	}
+	if result.Country == "" {
+		return result.State
+	}
+	return fmt.Sprintf("%s, %s", result.State, result.CountryCode)
 }
 
 func (o *OpenCageData) Map(location string) string {
