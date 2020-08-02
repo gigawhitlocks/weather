@@ -27,6 +27,10 @@ func CurrentConditions(location string) (string, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to find latitude and longitude for '%s'", location)
 	}
+	parsedLocation, err := geocoder.ParsedLocation(location)
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to parse location '%s'", location)
+	}
 	q := buildURL("/weather/nowcast",
 		&QueryParams{
 			flags: map[string]string{
@@ -74,7 +78,7 @@ func CurrentConditions(location string) (string, error) {
 	if len(cco) == 0 {
 		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
 	}
-	return cco[0].String(), nil
+	return fmt.Sprintf("%s:\n\n%s", parsedLocation, cco[0].String()), nil
 }
 
 // possible weather fields
