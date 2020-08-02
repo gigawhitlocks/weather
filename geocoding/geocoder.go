@@ -21,7 +21,9 @@ type Geocoder interface {
 
 var _ Geocoder = &OpenCageData{}
 
-type OpenCageData struct{}
+type OpenCageData struct {
+	response *OpenCageDataGeocodeResponse
+}
 
 func init() {
 	if ApiKey == "" {
@@ -204,10 +206,16 @@ func doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
 	return response, nil
 }
 
-func (_ *OpenCageData) Latlong(location string) (*Coordinates, error) {
-	response, err := doGeocode(location)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch lat/long for location '%s'", location)
+func (o *OpenCageData) Latlong(location string) (*Coordinates, error) {
+	var response *OpenCageDataGeocodeResponse
+	if o.response == nil {
+		response, err := doGeocode(location)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to fetch lat/long for location '%s'", location)
+		}
+		o.response = response
+	} else {
+		response = o.response
 	}
 	return &Coordinates{
 		Latitude:  response.Results[0].Geometry.Lat,
@@ -215,21 +223,33 @@ func (_ *OpenCageData) Latlong(location string) (*Coordinates, error) {
 	}, nil
 }
 
-func (_ *OpenCageData) Geocode(location string) (*OpenCageDataGeocodeResponse, error) {
-	return doGeocode(location)
+func (o *OpenCageData) Geocode(location string) (*OpenCageDataGeocodeResponse, error) {
+	response, err := doGeocode(location)
+	if err != nil {
+		return nil, err
+	}
+
+	o.response = response
+	return response, nil
 }
 
-func (_ *OpenCageData) ParsedLocation(location string) (string, error) {
-	response, err := doGet(buildQuery(location))
-	if err != nil {
-		return "", errors.Wrapf(err, "failed to fetch coordinates for location %s", location)
+func (o *OpenCageData) ParsedLocation(location string) (string, error) {
+	var response *OpenCageDataGeocodeResponse
+	if o.response == nil {
+		response, err := doGeocode(location)
+		if err != nil {
+			return "", errors.Wrapf(err, "failed to fetch coordinates for location %s", location)
+		}
+		o.response = response
+	} else {
+		response = o.response
 	}
 
 	result := response.Results[0].Components
 	return fmt.Sprintf("%s, %s, %s", result.City, result.State, result.Country), nil
 }
 
-func Map(location string) (string, error) {
+func (o *OpenCageData) Map(location string) (string, error) {
 	response, err := doGeocode(location)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to fetch map for location '%s'", location)

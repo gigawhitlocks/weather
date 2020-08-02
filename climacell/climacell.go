@@ -23,7 +23,7 @@ func init() {
 }
 
 func CurrentConditions(location string) (string, error) {
-	coords, err := geocoder.Geocode(location)
+	coords, err := geocoder.Latlong(location)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to find latitude and longitude for '%s'", location)
 	}
