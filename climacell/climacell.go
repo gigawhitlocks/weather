@@ -58,7 +58,6 @@ func CurrentConditions(location string) (string, error) {
 		})
 
 	resp, err := http.Get(q)
-	fmt.Println(q)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to get current weather from ClimaCell")
 	}

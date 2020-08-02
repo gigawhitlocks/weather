@@ -93,8 +93,7 @@ Cloud Cover: {{.CloudCover.Value}}{{.CloudCover.Units}}{{if .CloudCeiling.Value 
 Cloud Ceiling: {{.CloudCeiling.Value}} {{.CloudCeiling.Units}} 
 {{end}}{{if .CloudBase.Value }}
 Cloud Base: {{.CloudBase.Value}}{{.CloudBase.Units}}
-{{end}}
-Humidity: {{.Humidity.Value}}{{.Humidity.Units}}
+{{end}}Humidity: {{.Humidity.Value}}{{.Humidity.Units}}
 Latitude and Longitude: {{.Lat}}, {{.Lon}}`)
 	buffer := new(bytes.Buffer)
 	_ = t.Execute(buffer, c)
