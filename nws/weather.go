@@ -25,6 +25,7 @@ type Result struct {
 	Temperature           string
 	TemperatureValue      string
 	Timestamp             string
+	WindChill             string
 	WindGust              float32
 	WindSpeed             float32
 	Alerts                []Alert
@@ -248,6 +249,8 @@ func getCurrentAlerts(stationID string) (a *AlertList, err error) {
 	return a, nil
 }
 
+// getCurrentObservation retrieves the current conditions for the
+// given station from the NWS upstream
 func getCurrentObservation(stationID string) (o *Observation, err error) {
 	n := NewRequest(fmt.Sprintf(
 		"/stations/%s/observations/latest", stationID))
@@ -334,6 +337,8 @@ func GetWeather(zip string) (*Result, error) {
 		return nil, err
 	}
 
+	windChill := fmt.Sprintf("%.2f °%s", o.WindChill.Value, o.WindChill.UnitCode)
+
 	return &Result{
 		Name:                  zip,
 		Station:               stationName,
@@ -343,6 +348,7 @@ func GetWeather(zip string) (*Result, error) {
 		BarometricPressure:    toInchesHg(o.BarometricPressure.Value),
 		WindSpeed:             o.WindSpeed.Value,
 		WindGust:              o.WindGust.Value,
+		WindChill:             windChill,
 		PrecipitationLastHour: o.PrecipitationLastHour.Value,
 		HeatIndex:             toFahrenheit(o.HeatIndex.Value),
 		RelativeHumidity:      fmt.Sprintf("%.2f", o.RelativeHumidity.Value),
