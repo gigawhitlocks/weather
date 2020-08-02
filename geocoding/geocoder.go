@@ -207,15 +207,13 @@ func doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
 }
 
 func (o *OpenCageData) Latlong(location string) (*Coordinates, error) {
-	var response *OpenCageDataGeocodeResponse
+	response := o.response
 	if o.response == nil {
 		response, err := doGeocode(location)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to fetch lat/long for location '%s'", location)
 		}
 		o.response = response
-	} else {
-		response = o.response
 	}
 	return &Coordinates{
 		Latitude:  response.Results[0].Geometry.Lat,
@@ -234,17 +232,14 @@ func (o *OpenCageData) Geocode(location string) (*OpenCageDataGeocodeResponse, e
 }
 
 func (o *OpenCageData) ParsedLocation(location string) (string, error) {
-	var response *OpenCageDataGeocodeResponse
-	if o.response == nil {
-		response, err := doGeocode(location)
+	response := o.response
+	var err error
+	if response == nil {
+		response, err = doGeocode(location)
 		if err != nil {
 			return "", errors.Wrapf(err, "failed to fetch coordinates for location %s", location)
 		}
-		o.response = response
-	} else {
-		response = o.response
 	}
-
 	result := response.Results[0].Components
 	return fmt.Sprintf("%s, %s, %s", result.City, result.State, result.Country), nil
 }
