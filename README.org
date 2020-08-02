@@ -12,9 +12,9 @@ The ~nws/~ folder holds an ~nws~ module that can be used for querying the Nation
 
 The ~gfs/~ folder might hold some code that can assemble gifs from images on tropicaltidbits.com but I haven't dug in to see what still works.
 
-~geocoding~ provides a library backed by the [Open Cage Data](https://opencagedata.com/api)
+~geocoding~ provides a library backed by the [[https://opencagedata.com/api][OpenCageData API]]
 
-~climacell~ provides a package backed by the [ClimaCell](https://climacell.co) API aimed for use with my Mattermost weather plugin. It might not be very general.
+~climacell~ provides a package backed by the [[https://climacell.co][ClimaCell]] API aimed for use with my Mattermost weather plugin. It might not be very general.
 
 ** REMOVED
 
