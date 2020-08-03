@@ -75,7 +75,72 @@ func CurrentConditions(location string) (string, error) {
 	if len(cco) == 0 {
 		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
 	}
-	return fmt.Sprintf("| Found Location  | %s | Query | %s |\n| :--- | ---: | :--- | ---: |\n%s", parsedLocation, location, cco[0].String()), nil
+
+	// tile := CoordinatesToTile(coords, 16)
+	// q = buildURL(fmt.Sprintf("weather/layers/field/now/%d/%d/%d.png", tile.Z, tile.X, tile.Y),
+	// 	&QueryParams{
+	// 		flags: map[string]string{},
+	// 		fields: []string{
+	// 			"precipitation",
+	// 		},
+	// 	})
+	// resp, err = http.Get(q)
+
+	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
+}
+
+func (c *ClimaCellObservation) Title() (titleText string) {
+	switch c.WeatherCode.Value {
+	case "freezing_rain_heavy":
+		titleText = "Heavy Freezing Rain"
+	case "freezing_rain":
+		titleText = "Freezing Rain"
+	case "freezing_rain_light":
+		titleText = "Light Freezing Rain"
+	case "freezing_drizzle":
+		titleText = "Freezing Drizzle"
+	case "ice_pellets_heavy":
+		titleText = "Heavy Ice Pellets"
+	case "ice_pellets":
+		titleText = "Ice Pellets"
+	case "ice_pellets_light":
+		titleText = "Light Ice Pellets"
+	case "snow_heavy":
+		titleText = "Heavy Snow"
+	case "snow":
+		titleText = "Snow"
+	case "snow_light":
+		titleText = "Light Snow"
+	case "flurries":
+		titleText = "Flurries"
+	case "tstorm":
+		titleText = "Thunderstorm"
+	case "rain_heavy":
+		titleText = "Downpour"
+	case "rain":
+		titleText = "Rain"
+	case "rain_light":
+		titleText = "Light Rain"
+	case "drizzle":
+		titleText = "Drizzle"
+	case "fog_light":
+		titleText = "Light Fog"
+	case "fog":
+		titleText = "Fog"
+	case "cloudy":
+		titleText = "Cloudy"
+	case "mostly_cloudy":
+		titleText = "Mostly Cloudy"
+	case "partly_cloudy":
+		titleText = "Partly Cloudy"
+	case "mostly_clear":
+		titleText = "Mostly Clear"
+	case "clear":
+		titleText = "Clear"
+	default:
+		titleText = ""
+	}
+	return
 }
 
 // possible weather fields

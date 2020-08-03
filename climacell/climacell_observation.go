@@ -84,9 +84,9 @@ func (c *ClimaCellObservation) String() string {
 		Parse(
 			`| Latitude | {{.Lat}} | Longitude | {{.Lon}} |
 | Temperature | {{.Temp.Value}} °{{.Temp.Units}} | Feels Like | {{.FeelsLike.Value}} °{{.FeelsLike.Units}} |
-| Cloud Cover | {{.CloudCover.Value}}{{.CloudCover.Units}} | Precipitation | {{.Precipitation.Value}} {{.Precipitation.Units}} |
+| Precipitation | {{.Precipitation.Value}} {{.Precipitation.Units}} | Type of Precipitation | {{.PrecipitationType.Value }} |
 | Wind Gust | {{.WindGust.Value}} {{.WindGust.Units}} | Barometric Pressure | {{.BaroPressure.Value}} {{.BaroPressure.Units}} |
-| Humidity | {{.Humidity.Value}}{{.Humidity.Units}} | Visibility | {{.Visibility.Value}} {{.Visibility.Units}} |
+| Humidity | {{.Humidity.Value}}{{.Humidity.Units}} | Cloud Cover | {{.CloudCover.Value}}{{.CloudCover.Units}} |
 `)
 	buffer := new(bytes.Buffer)
 	_ = t.Execute(buffer, c)
