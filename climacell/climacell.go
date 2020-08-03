@@ -1,8 +1,10 @@
 package climacell
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"image/png"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -20,10 +22,10 @@ func init() {
 	}
 }
 
-func CurrentConditions(location string) (string, error) {
+func CurrentConditions(location string) (string, []byte, error) {
 	geocoder, err := geocoding.NewOpenCageData(location)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
+		return "", nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
 	coords := geocoder.Latlong()
 	parsedLocation := geocoder.ParsedLocation()
@@ -60,33 +62,52 @@ func CurrentConditions(location string) (string, error) {
 
 	resp, err := http.Get(q)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get current weather from ClimaCell")
+		return "", nil, errors.Wrap(err, "failed to get current weather from ClimaCell")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read body from response")
+		return "", nil, errors.Wrap(err, "failed to read body from response")
 	}
 
 	cco := []*ClimaCellObservation{}
 	err = json.Unmarshal(body, &cco)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal JSON from body")
+		return "", nil, errors.Wrap(err, "failed to unmarshal JSON from body")
 	}
 	if len(cco) == 0 {
-		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
+		return "", nil, errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
 	}
 
-	// tile := CoordinatesToTile(coords, 16)
-	// q = buildURL(fmt.Sprintf("weather/layers/field/now/%d/%d/%d.png", tile.Z, tile.X, tile.Y),
-	// 	&QueryParams{
-	// 		flags: map[string]string{},
-	// 		fields: []string{
-	// 			"precipitation",
-	// 		},
-	// 	})
-	// resp, err = http.Get(q)
+	tile := CoordinatesToTile(coords, 6)
+	q = buildURL(fmt.Sprintf("/weather/layers/field/now/%d/%d/%d.png", tile.Z, tile.X, tile.Y),
+		&QueryParams{
+			flags: map[string]string{},
+			fields: []string{
+				"precipitation",
+			},
+		})
+	resp, err = http.Get(q)
+	if err != nil {
+		return "", nil, err
+	}
 
-	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
+	image, err := png.Decode(resp.Body)
+	if err != nil {
+		fmt.Println(err.Error())
+
+		body, err = ioutil.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+		fmt.Println(string(body))
+		return "", nil, err
+	}
+
+	buf := new(bytes.Buffer)
+	err = png.Encode(buf, image)
+
+	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()),
+		buf.Bytes(), nil
 }
 
 var titleTextMap map[string]string = map[string]string{
