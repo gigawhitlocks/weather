@@ -89,56 +89,36 @@ func CurrentConditions(location string) (string, error) {
 	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
 }
 
+var titleTextMap map[string]string = map[string]string{
+	"freezing_rain_heavy": "Heavy Freezing Rain",
+	"freezing_rain":       "Freezing Rain",
+	"freezing_rain_light": "Light Freezing Rain",
+	"freezing_drizzle":    "Freezing Drizzle",
+	"ice_pellets_heavy":   "Heavy Ice Pellets",
+	"ice_pellets":         "Ice Pellets",
+	"ice_pellets_light":   "Light Ice Pellets",
+	"snow_heavy":          "Heavy Snow",
+	"snow":                "Snow",
+	"snow_light":          "Light Snow",
+	"flurries":            "Flurries",
+	"tstorm":              "Thunderstorm",
+	"rain_heavy":          "Downpour",
+	"rain":                "Rain",
+	"rain_light":          "Light Rain",
+	"drizzle":             "Drizzle",
+	"fog_light":           "Light Fog",
+	"fog":                 "Fog",
+	"cloudy":              "Cloudy",
+	"mostly_cloudy":       "Mostly Cloudy",
+	"partly_cloudy":       "Partly Cloudy",
+	"mostly_clear":        "Mostly Clear",
+	"clear":               "Clear",
+}
+
 func (c *ClimaCellObservation) Title() (titleText string) {
-	switch c.WeatherCode.Value {
-	case "freezing_rain_heavy":
-		titleText = "Heavy Freezing Rain"
-	case "freezing_rain":
-		titleText = "Freezing Rain"
-	case "freezing_rain_light":
-		titleText = "Light Freezing Rain"
-	case "freezing_drizzle":
-		titleText = "Freezing Drizzle"
-	case "ice_pellets_heavy":
-		titleText = "Heavy Ice Pellets"
-	case "ice_pellets":
-		titleText = "Ice Pellets"
-	case "ice_pellets_light":
-		titleText = "Light Ice Pellets"
-	case "snow_heavy":
-		titleText = "Heavy Snow"
-	case "snow":
-		titleText = "Snow"
-	case "snow_light":
-		titleText = "Light Snow"
-	case "flurries":
-		titleText = "Flurries"
-	case "tstorm":
-		titleText = "Thunderstorm"
-	case "rain_heavy":
-		titleText = "Downpour"
-	case "rain":
-		titleText = "Rain"
-	case "rain_light":
-		titleText = "Light Rain"
-	case "drizzle":
-		titleText = "Drizzle"
-	case "fog_light":
-		titleText = "Light Fog"
-	case "fog":
-		titleText = "Fog"
-	case "cloudy":
-		titleText = "Cloudy"
-	case "mostly_cloudy":
-		titleText = "Mostly Cloudy"
-	case "partly_cloudy":
-		titleText = "Partly Cloudy"
-	case "mostly_clear":
-		titleText = "Mostly Clear"
-	case "clear":
-		titleText = "Clear"
-	default:
-		titleText = ""
+	titleText, ok := titleTextMap[c.WeatherCode.Value]
+	if !ok {
+		return c.WeatherCode.Value
 	}
 	return
 }
