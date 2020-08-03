@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/pkg/errors"
 )
@@ -55,14 +56,19 @@ func (o *OpenCageData) Geocode(location string) (err error) {
 func (o *OpenCageData) ParsedLocation() string {
 	result := o.Results[0].Components
 	if result.City != "" && result.State != "" {
-		return fmt.Sprintf("%s, %s", result.City, result.State)
+		if strings.ToUpper(result.CountryCode) == "US" {
+			return fmt.Sprintf("%s, %s", result.City, result.State)
+		} else {
+			return fmt.Sprintf("%s, %s, %s", result.City, result.State, result.Country)
+		}
 	}
+
 	if result.City != "" && result.State == "" {
-		if result.CountryCode == "US" || result.CountryCode == "" {
+		if result.CountryCode == "us" || result.CountryCode == "" {
 			return fmt.Sprintf("%s", result.City)
 		}
-		if result.CountryCode != "US" {
-			return fmt.Sprintf("%s, %s", result.City, result.CountryCode)
+		if result.CountryCode != "us" {
+			return fmt.Sprintf("%s, %s", result.City, result.Country)
 		}
 	}
 
@@ -72,7 +78,12 @@ func (o *OpenCageData) ParsedLocation() string {
 	if result.Country == "" {
 		return result.State
 	}
-	return fmt.Sprintf("%s, %s", result.State, result.CountryCode)
+
+	if result.CountryCode != "us" {
+		return fmt.Sprintf("%s, %s", result.State, result.Country)
+	} else {
+		return fmt.Sprintf("%s", result.State)
+	}
 }
 
 func (o *OpenCageData) Map(location string) string {

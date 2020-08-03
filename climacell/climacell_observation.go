@@ -2,6 +2,7 @@ package climacell
 
 import (
 	"bytes"
+	"fmt"
 	"text/template"
 	"time"
 )
@@ -83,12 +84,15 @@ func (c *ClimaCellObservation) String() string {
 		New("ClimaCellObservation").
 		Parse(
 			`| Latitude | {{.Lat}} | Longitude | {{.Lon}} |
-| Temperature | {{.Temp.Value}} °{{.Temp.Units}} | Feels Like | {{.FeelsLike.Value}} °{{.FeelsLike.Units}} |
-| Precipitation | {{.Precipitation.Value}} {{.Precipitation.Units}} | Type of Precipitation | {{.PrecipitationType.Value }} |
+| Temperature | {{.Temp.Value}} °{{.Temp.Units}} | Feels Like | {{.FeelsLike.Value}} °{{.FeelsLike.Units}} |{{if (ne .Precipitation.Value 0.0)}}
+| Precipitation | {{.Precipitation.Value}} {{.Precipitation.Units}} | Type of Precipitation | {{.PrecipitationType.Value }} |{{end}}
 | Wind Gust | {{.WindGust.Value}} {{.WindGust.Units}} | Barometric Pressure | {{.BaroPressure.Value}} {{.BaroPressure.Units}} |
 | Humidity | {{.Humidity.Value}}{{.Humidity.Units}} | Cloud Cover | {{.CloudCover.Value}}{{.CloudCover.Units}} |
 `)
 	buffer := new(bytes.Buffer)
-	_ = t.Execute(buffer, c)
+	err := t.Execute(buffer, c)
+	if err != nil {
+		fmt.Println(err.Error())
+	}
 	return buffer.String()
 }
