@@ -13,7 +13,7 @@ import (
 	"os"
 
 	"github.com/disintegration/imaging"
-	"github.com/gigawhitlocks/weather/geocoding"
+	geo "github.com/gigawhitlocks/weather/geocoding"
 	"github.com/pkg/errors"
 )
 
@@ -27,7 +27,7 @@ func init() {
 }
 
 func CurrentConditions(location string) (string, []byte, error) {
-	geocoder, err := geocoding.NewOpenCageData(location)
+	geocoder, err := geo.NewOpenCageData(location)
 	if err != nil {
 		return "", nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
@@ -83,27 +83,27 @@ func CurrentConditions(location string) (string, []byte, error) {
 	}
 
 	zoom := 7
-	tile := CoordinatesToTile(coords, zoom)
-	var tiles [4]*SlippyMapTile
+	tile := geo.CoordinatesToTile(coords, zoom)
+	var tiles [4]*geo.SlippyMapTile
 	corner := tile.Corner()
 	switch corner {
-	case TopLeft:
-		tiles = [4]*SlippyMapTile{
+	case geo.TopLeft:
+		tiles = [4]*geo.SlippyMapTile{
 			tile, {X: tile.X + 1, Y: tile.Y},
 			{X: tile.X, Y: tile.Y + 1}, {X: tile.X + 1, Y: tile.Y + 1},
 		}
-	case TopRight:
-		tiles = [4]*SlippyMapTile{
+	case geo.TopRight:
+		tiles = [4]*geo.SlippyMapTile{
 			{X: tile.X - 1, Y: tile.Y}, tile,
 			{X: tile.X - 1, Y: tile.Y + 1}, {X: tile.X, Y: tile.Y + 1},
 		}
-	case BottomLeft:
-		tiles = [4]*SlippyMapTile{
+	case geo.BottomLeft:
+		tiles = [4]*geo.SlippyMapTile{
 			{X: tile.X, Y: tile.Y - 1}, {X: tile.X + 1, Y: tile.Y - 1},
 			tile, {X: tile.X + 1, Y: tile.Y},
 		}
-	case BottomRight:
-		tiles = [4]*SlippyMapTile{
+	case geo.BottomRight:
+		tiles = [4]*geo.SlippyMapTile{
 			{X: tile.X - 1, Y: tile.Y - 1}, {X: tile.X, Y: tile.Y - 1},
 			{X: tile.X - 1, Y: tile.Y}, tile,
 		}
@@ -189,7 +189,7 @@ func (c *ClimaCellObservation) Title() (titleText string) {
 // 		"wind_gust",
 // 		"temp",
 
-func getWeatherLayer(tiles [4]*SlippyMapTile, feature string) (image.Image, error) {
+func getWeatherLayer(tiles [4]*geo.SlippyMapTile, feature string) (image.Image, error) {
 	images := [4]*image.Image{}
 	for i := 0; i < 4; i++ {
 		q := buildURL(fmt.Sprintf("/weather/layers/%s/now/%d/%d/%d.png", feature, tiles[i].Z, tiles[i].X, tiles[i].Y),
@@ -211,11 +211,11 @@ func getWeatherLayer(tiles [4]*SlippyMapTile, feature string) (image.Image, erro
 	return assembleMapTiles(images), nil
 }
 
-func getPrecipitationLayer(tiles [4]*SlippyMapTile) (image.Image, error) {
+func getPrecipitationLayer(tiles [4]*geo.SlippyMapTile) (image.Image, error) {
 	return getWeatherLayer(tiles, "precipitation")
 }
 
-func getOpenStreetMapLayers(tiles [4]*SlippyMapTile) (image.Image, error) {
+func getOpenStreetMapLayers(tiles [4]*geo.SlippyMapTile) (image.Image, error) {
 	images := [4]*image.Image{}
 	for i := 0; i < 4; i++ {
 		server := []string{"a", "b", "c"}[rand.Int()%3]

@@ -1,9 +1,7 @@
-package climacell
+package geocoding
 
 import (
 	"math"
-
-	"github.com/gigawhitlocks/weather/geocoding"
 )
 
 type SlippyMapTile struct {
@@ -24,7 +22,7 @@ const (
 	BottomRight
 )
 
-func CoordinatesToTile(coordinates *geocoding.Coordinates, zoom int) *SlippyMapTile {
+func CoordinatesToTile(coordinates *Coordinates, zoom int) *SlippyMapTile {
 	tile := &SlippyMapTile{
 		Lat:  coordinates.Latitude,
 		Long: coordinates.Longitude,
