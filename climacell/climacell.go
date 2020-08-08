@@ -220,7 +220,6 @@ func getOpenStreetMapLayers(tiles [4]*SlippyMapTile) (image.Image, error) {
 		server := []string{"a", "b", "c"}[rand.Int()%3]
 		url := fmt.Sprintf("https://%s.tile.openstreetmap.org/%d/%d/%d.png",
 			server, tiles[i].Z, tiles[i].X, tiles[i].Y)
-		fmt.Println("XXX " + url)
 		resp, err := http.Get(url)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get map tile from osm")

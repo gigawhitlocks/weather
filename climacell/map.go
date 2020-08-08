@@ -1,6 +1,7 @@
 package climacell
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/gigawhitlocks/weather/geocoding"
@@ -34,20 +35,23 @@ func CoordinatesToTile(coordinates *geocoding.Coordinates, zoom int) *SlippyMapT
 	x, y := tile.Deg2num(tile)
 	tile.X = int(math.Floor(x))
 	tile.Y = int(math.Floor(y))
-	tile.PointX = math.Mod(x, 1.0)
-	tile.PointY = math.Mod(y, 1.0)
+	tile.PointX = math.Mod(x, 1.0) * 256
+	tile.PointY = math.Mod(y, 1.0) * 256
+
+	fmt.Println(tile.PointX)
+	fmt.Println(tile.PointY)
 	return tile
 }
 
 func (m *SlippyMapTile) Corner() int {
-	if m.PointX > 127 && m.PointY > 127 {
-		return TopRight
-	} else if m.PointX < 128 && m.PointY > 127 {
-		return TopLeft
-	} else if m.PointX < 128 && m.PointY < 128 {
+	if m.PointX > 128 && m.PointY < 128 {
 		return BottomLeft
-	} else {
+	} else if m.PointX < 128 && m.PointY < 128 {
 		return BottomRight
+	} else if m.PointX < 128 && m.PointY > 128 {
+		return TopRight
+	} else {
+		return TopLeft
 	}
 }
 
