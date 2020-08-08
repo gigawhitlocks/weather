@@ -13,6 +13,7 @@ import (
 	"os"
 
 	"github.com/disintegration/imaging"
+	"github.com/gigawhitlocks/weather/geocoding"
 	geo "github.com/gigawhitlocks/weather/geocoding"
 	"github.com/pkg/errors"
 )
@@ -26,10 +27,10 @@ func init() {
 	}
 }
 
-func CurrentConditions(location string) (string, []byte, error) {
+func CurrentConditions(location string) (string, error) {
 	geocoder, err := geo.NewOpenCageData(location)
 	if err != nil {
-		return "", nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
+		return "", errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
 	coords := geocoder.Latlong()
 	parsedLocation := geocoder.ParsedLocation()
@@ -66,61 +67,42 @@ func CurrentConditions(location string) (string, []byte, error) {
 
 	resp, err := http.Get(q)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to get current weather from ClimaCell")
+		return "", errors.Wrap(err, "failed to get current weather from ClimaCell")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to read body from response")
+		return "", errors.Wrap(err, "failed to read body from response")
 	}
 
 	cco := []*ClimaCellObservation{}
 	err = json.Unmarshal(body, &cco)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to unmarshal JSON from body")
+		return "", errors.Wrap(err, "failed to unmarshal JSON from body")
 	}
 	if len(cco) == 0 {
-		return "", nil, errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
+		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
 	}
 
+	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
+}
+
+func BuildMap(location string, layers ...string) ([]byte, error) {
+	geocoder, err := geo.NewOpenCageData(location)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
+	}
+	coords := geocoder.Latlong()
 	zoom := 7
-	tile := geo.CoordinatesToTile(coords, zoom)
-	var tiles [4]*geo.SlippyMapTile
-	corner := tile.Corner()
-	switch corner {
-	case geo.TopLeft:
-		tiles = [4]*geo.SlippyMapTile{
-			tile, {X: tile.X + 1, Y: tile.Y},
-			{X: tile.X, Y: tile.Y + 1}, {X: tile.X + 1, Y: tile.Y + 1},
-		}
-	case geo.TopRight:
-		tiles = [4]*geo.SlippyMapTile{
-			{X: tile.X - 1, Y: tile.Y}, tile,
-			{X: tile.X - 1, Y: tile.Y + 1}, {X: tile.X, Y: tile.Y + 1},
-		}
-	case geo.BottomLeft:
-		tiles = [4]*geo.SlippyMapTile{
-			{X: tile.X, Y: tile.Y - 1}, {X: tile.X + 1, Y: tile.Y - 1},
-			tile, {X: tile.X + 1, Y: tile.Y},
-		}
-	case geo.BottomRight:
-		tiles = [4]*geo.SlippyMapTile{
-			{X: tile.X - 1, Y: tile.Y - 1}, {X: tile.X, Y: tile.Y - 1},
-			{X: tile.X - 1, Y: tile.Y}, tile,
-		}
-	}
-
-	for _, t := range tiles {
-		t.Z = zoom
-	}
+	tiles := geocoding.CoordsToSlippyMapTiles(coords, zoom)
 
 	mapImage, err := getOpenStreetMapLayers(tiles)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to get open street map layers")
+		return nil, errors.Wrap(err, "failed to get open street map layers")
 	}
 
 	weatherLayers, err := getPrecipitationLayer(tiles)
 	if err != nil {
-		return "", nil, errors.Wrap(err, "failed to get precipitation map")
+		return nil, errors.Wrap(err, "failed to get precipitation map")
 	}
 
 	image := imaging.Overlay(mapImage, weatherLayers, image.Point{X: 0, Y: 0}, 1)
@@ -128,8 +110,7 @@ func CurrentConditions(location string) (string, []byte, error) {
 	buf := new(bytes.Buffer)
 	err = png.Encode(buf, image)
 
-	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()),
-		buf.Bytes(), nil
+	return buf.Bytes(), nil
 }
 
 var titleTextMap map[string]string = map[string]string{

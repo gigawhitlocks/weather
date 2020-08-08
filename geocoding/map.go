@@ -67,3 +67,37 @@ func (*SlippyMapTile) Num2deg(t *SlippyMapTile) (lat float64, long float64) {
 	long = float64(t.X)/math.Exp2(float64(t.Z))*360.0 - 180.0
 	return lat, long
 }
+
+func CoordsToSlippyMapTiles(coords *Coordinates, zoom int) [4]*SlippyMapTile {
+	tile := CoordinatesToTile(coords, zoom)
+	var tiles [4]*SlippyMapTile
+	corner := tile.Corner()
+	switch corner {
+	case TopLeft:
+		tiles = [4]*SlippyMapTile{
+			tile, {X: tile.X + 1, Y: tile.Y},
+			{X: tile.X, Y: tile.Y + 1}, {X: tile.X + 1, Y: tile.Y + 1},
+		}
+	case TopRight:
+		tiles = [4]*SlippyMapTile{
+			{X: tile.X - 1, Y: tile.Y}, tile,
+			{X: tile.X - 1, Y: tile.Y + 1}, {X: tile.X, Y: tile.Y + 1},
+		}
+	case BottomLeft:
+		tiles = [4]*SlippyMapTile{
+			{X: tile.X, Y: tile.Y - 1}, {X: tile.X + 1, Y: tile.Y - 1},
+			tile, {X: tile.X + 1, Y: tile.Y},
+		}
+	case BottomRight:
+		tiles = [4]*SlippyMapTile{
+			{X: tile.X - 1, Y: tile.Y - 1}, {X: tile.X, Y: tile.Y - 1},
+			{X: tile.X - 1, Y: tile.Y}, tile,
+		}
+	}
+
+	for _, t := range tiles {
+		t.Z = zoom
+	}
+
+	return tiles
+}
