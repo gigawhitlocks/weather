@@ -1,7 +1,6 @@
 package climacell
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/gigawhitlocks/weather/geocoding"
@@ -38,8 +37,6 @@ func CoordinatesToTile(coordinates *geocoding.Coordinates, zoom int) *SlippyMapT
 	tile.PointX = math.Mod(x, 1.0) * 256
 	tile.PointY = math.Mod(y, 1.0) * 256
 
-	fmt.Println(tile.PointX)
-	fmt.Println(tile.PointY)
 	return tile
 }
 

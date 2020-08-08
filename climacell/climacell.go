@@ -124,6 +124,7 @@ func CurrentConditions(location string) (string, []byte, error) {
 	}
 
 	image := imaging.Overlay(mapImage, weatherLayers, image.Point{X: 0, Y: 0}, 1)
+
 	buf := new(bytes.Buffer)
 	err = png.Encode(buf, image)
 
