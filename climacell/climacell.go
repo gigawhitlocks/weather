@@ -11,6 +11,7 @@ import (
 	"math/rand"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/disintegration/imaging"
 	"github.com/gigawhitlocks/weather/geocoding"
@@ -86,31 +87,67 @@ func CurrentConditions(location string) (string, error) {
 	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
 }
 
-func BuildMap(location string, layers ...string) ([]byte, error) {
+func isValidFeature(feature string) bool {
+	_, ok := map[string]interface{}{
+		"precipitation":   nil,
+		"temp":            nil,
+		"wind_speed":      nil,
+		"wind_direction":  nil,
+		"wind_gust":       nil,
+		"visibility":      nil,
+		"baro_pressure ":  nil,
+		"dewpoint":        nil,
+		"humidity":        nil,
+		"cloud_cover":     nil,
+		"cloud_base":      nil,
+		"cloud_ceiling":   nil,
+		"cloud_satellite": nil,
+	}[strings.ToLower(feature)]
+	return ok
+}
+
+func BuildMap(location string, features ...string) ([]byte, error) {
 	geocoder, err := geo.NewOpenCageData(location)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
+	validFeatures := []string{}
+
+	for _, feature := range features {
+		if isValidFeature(feature) {
+			validFeatures = append(validFeatures, feature)
+		}
+	}
+
 	coords := geocoder.Latlong()
 	zoom := 7
 	tiles := geocoding.CoordsToSlippyMapTiles(coords, zoom)
-
 	mapImage, err := getOpenStreetMapLayers(tiles)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get open street map layers")
 	}
-
-	weatherLayers, err := getPrecipitationLayer(tiles)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get precipitation map")
+	first := true
+	var img image.Image
+	if len(validFeatures) == 0 {
+		validFeatures = []string{"precipitation"}
 	}
 
-	image := imaging.Overlay(mapImage, weatherLayers, image.Point{X: 0, Y: 0}, 1)
+	for _, feature := range validFeatures {
+		weatherLayers, err := getWeatherLayer(tiles, feature)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get %s layer", feature)
+		}
+		if first {
+			img = imaging.Overlay(mapImage, weatherLayers, image.Point{X: 0, Y: 0}, .7)
+			first = false
+		} else {
+			img = imaging.Overlay(img, weatherLayers, image.Point{X: 0, Y: 0}, .7)
+		}
+	}
 
 	buf := new(bytes.Buffer)
-	err = png.Encode(buf, image)
-
-	return buf.Bytes(), nil
+	err = png.Encode(buf, img)
+	return buf.Bytes(), err
 }
 
 var titleTextMap map[string]string = map[string]string{
@@ -181,6 +218,9 @@ func getWeatherLayer(tiles [4]*geo.SlippyMapTile, feature string) (image.Image, 
 		resp, err := http.Get(q)
 		if err != nil {
 			return nil, err
+		}
+		if resp.StatusCode != 200 {
+			return nil, errors.Errorf("got status code %d", resp.StatusCode)
 		}
 
 		weatherLayer, err := png.Decode(resp.Body)

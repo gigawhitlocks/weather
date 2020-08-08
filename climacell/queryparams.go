@@ -12,7 +12,10 @@ type QueryParams struct {
 
 func (q QueryParams) String() string {
 	flags := ""
-	fields := fmt.Sprintf("fields=%s", strings.Join(q.fields, `%2C`))
+	fields := ""
+	if len(q.fields) > 0 {
+		fields = fmt.Sprintf("fields=%s", strings.Join(q.fields, `%2C`))
+	}
 	for key, value := range q.flags {
 		flags = fmt.Sprintf("%s&%s=%s", flags, key, value)
 	}
