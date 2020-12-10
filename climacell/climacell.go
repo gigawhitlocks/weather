@@ -28,10 +28,16 @@ func init() {
 	}
 }
 
-func CurrentConditions(location string) (string, error) {
+type Observation struct {
+	ParsedLocation string
+
+	*ClimaCellObservation
+}
+
+func CurrentConditions(location string) (*Observation, error) {
 	geocoder, err := geo.NewOpenCageData(location)
 	if err != nil {
-		return "", errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
+		return nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
 	coords := geocoder.Latlong()
 	parsedLocation := geocoder.ParsedLocation()
@@ -68,23 +74,32 @@ func CurrentConditions(location string) (string, error) {
 
 	resp, err := http.Get(q)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to get current weather from ClimaCell")
+		return nil, errors.Wrap(err, "failed to get current weather from ClimaCell")
 	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to read body from response")
+		return nil, errors.Wrap(err, "failed to read body from response")
 	}
 
 	cco := []*ClimaCellObservation{}
 	err = json.Unmarshal(body, &cco)
 	if err != nil {
-		return "", errors.Wrap(err, "failed to unmarshal JSON from body")
+		return nil, errors.Wrap(err, "failed to unmarshal JSON from body")
 	}
 	if len(cco) == 0 {
-		return "", errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
+		return nil, errors.New("unmarshaled ClimaCell observations from JSON without error but failed to get results")
+	}
+	return &Observation{ClimaCellObservation: cco[0], ParsedLocation: parsedLocation}, nil
+
+}
+func MarkdownCurrentConditions(location string) (string, error) {
+
+	cco, err := CurrentConditions(location)
+	if err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco[0].Title(), parsedLocation, cco[0].String()), nil
+	return fmt.Sprintf("| Current Conditions | %s | Location  | %s |\n| :--- | ---: | :--- | ---: |\n%s", cco.Title(), cco.ParsedLocation, cco.String()), nil
 }
 
 func isValidFeature(feature string) bool {
