@@ -22,6 +22,6 @@ func (q QueryParams) String() string {
 	return fmt.Sprintf("%s&%s", flags, fields)
 }
 
-func buildURL(endpoint string, queryParams *QueryParams) string {
-	return fmt.Sprintf("%s%s?apikey=%s%s", apiURL, endpoint, apiKey, queryParams)
+func (c *ClimaCell) buildURL(endpoint string, queryParams *QueryParams) string {
+	return fmt.Sprintf("%s%s?apikey=%s%s", apiURL, endpoint, c.ApiKey, queryParams)
 }

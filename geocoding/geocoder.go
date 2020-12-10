@@ -6,20 +6,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/pkg/errors"
 )
-
-var ApiKey = os.Getenv("GEOCODING_KEY")
-var ApiURL = fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?key=%s", ApiKey)
-
-func init() {
-	if ApiKey == "" {
-		panic("must provide OpenCageData API key to use this Geocoding package (export GEOCODING_KEY)")
-	}
-}
 
 type Geocoder interface {
 	Latlong() *Coordinates
@@ -29,11 +19,12 @@ type Geocoder interface {
 var _ Geocoder = &OpenCageData{}
 
 type OpenCageData struct {
+	ApiURL string
 	*OpenCageDataGeocodeResponse
 }
 
-func NewOpenCageData(location string) (*OpenCageData, error) {
-	o := &OpenCageData{}
+func NewOpenCageData(location, apiKey string) (*OpenCageData, error) {
+	o := &OpenCageData{ApiURL: fmt.Sprintf("https://api.opencagedata.com/geocode/v1/json?key=%s", apiKey)}
 	err := o.Geocode(location)
 	if err != nil {
 		return nil, err
@@ -49,7 +40,7 @@ func (o *OpenCageData) Latlong() *Coordinates {
 }
 
 func (o *OpenCageData) Geocode(location string) (err error) {
-	o.OpenCageDataGeocodeResponse, err = doGeocode(location)
+	o.OpenCageDataGeocodeResponse, err = o.doGeocode(location)
 	return
 }
 
@@ -90,8 +81,8 @@ func (o *OpenCageData) Map(location string) string {
 	return o.Results[0].Annotations.OSM.URL
 }
 
-func buildQuery(query string) string {
-	return fmt.Sprintf("%s&q=%s", ApiURL, url.QueryEscape(query))
+func (o *OpenCageData) buildQuery(query string) string {
+	return fmt.Sprintf("%s&q=%s", o.ApiURL, url.QueryEscape(query))
 }
 
 func doGet(url string) (ocdgr *OpenCageDataGeocodeResponse, err error) {
@@ -116,8 +107,8 @@ type Coordinates struct {
 	Longitude float64
 }
 
-func doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
-	response, err := doGet(buildQuery(location))
+func (o *OpenCageData) doGeocode(location string) (*OpenCageDataGeocodeResponse, error) {
+	response, err := doGet(o.buildQuery(location))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch coordinates for location %s", location)
 	}

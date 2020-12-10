@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"math/rand"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/disintegration/imaging"
@@ -19,13 +18,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-var apiKey = os.Getenv("WEATHER_KEY")
-var apiURL string = "https://api.climacell.co/v3"
+type ClimaCell struct {
+	ApiKey          string
+	GeocodingApiKey string
+}
 
-func init() {
-	if apiKey == "" {
-		panic("must provide ClimaCell API key (export WEATHER_KEY) to use this package")
-	}
+const apiURL string = "https://api.climacell.co/v3"
+
+func NewClimaCell(apiKey, geocodingApiKey string) *ClimaCell {
+	return &ClimaCell{ApiKey: apiKey, GeocodingApiKey: geocodingApiKey}
 }
 
 type Observation struct {
@@ -34,15 +35,15 @@ type Observation struct {
 	*ClimaCellObservation
 }
 
-func CurrentConditions(location string) (*Observation, error) {
-	geocoder, err := geo.NewOpenCageData(location)
+func (c *ClimaCell) CurrentConditions(location string) (*Observation, error) {
+	geocoder, err := geo.NewOpenCageData(location, c.GeocodingApiKey)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
 	coords := geocoder.Latlong()
 	parsedLocation := geocoder.ParsedLocation()
 
-	q := buildURL("/weather/nowcast",
+	q := c.buildURL("/weather/nowcast",
 		&QueryParams{
 			flags: map[string]string{
 				"start_time":  "now",
@@ -92,9 +93,9 @@ func CurrentConditions(location string) (*Observation, error) {
 	return &Observation{ClimaCellObservation: cco[0], ParsedLocation: parsedLocation}, nil
 
 }
-func MarkdownCurrentConditions(location string) (string, error) {
+func (c *ClimaCell) MarkdownCurrentConditions(location string) (string, error) {
 
-	cco, err := CurrentConditions(location)
+	cco, err := c.CurrentConditions(location)
 	if err != nil {
 		return "", err
 	}
@@ -121,8 +122,8 @@ func isValidFeature(feature string) bool {
 	return ok
 }
 
-func BuildMap(location string, features ...string) ([]byte, error) {
-	geocoder, err := geo.NewOpenCageData(location)
+func (c *ClimaCell) BuildMap(location string, features ...string) ([]byte, error) {
+	geocoder, err := geo.NewOpenCageData(location, c.GeocodingApiKey)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to find geocoding information for '%s'", location)
 	}
@@ -148,7 +149,7 @@ func BuildMap(location string, features ...string) ([]byte, error) {
 	}
 
 	for _, feature := range validFeatures {
-		weatherLayers, err := getWeatherLayer(tiles, feature)
+		weatherLayers, err := c.getWeatherLayer(tiles, feature)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get %s layer", feature)
 		}
@@ -222,10 +223,10 @@ func (c *ClimaCellObservation) Title() (titleText string) {
 // 		"wind_gust",
 // 		"temp",
 
-func getWeatherLayer(tiles [4]*geo.SlippyMapTile, feature string) (image.Image, error) {
+func (c *ClimaCell) getWeatherLayer(tiles [4]*geo.SlippyMapTile, feature string) (image.Image, error) {
 	images := [4]*image.Image{}
 	for i := 0; i < 4; i++ {
-		q := buildURL(fmt.Sprintf("/weather/layers/%s/now/%d/%d/%d.png", feature, tiles[i].Z, tiles[i].X, tiles[i].Y),
+		q := c.buildURL(fmt.Sprintf("/weather/layers/%s/now/%d/%d/%d.png", feature, tiles[i].Z, tiles[i].X, tiles[i].Y),
 			&QueryParams{
 				flags:  map[string]string{},
 				fields: []string{},
@@ -247,8 +248,8 @@ func getWeatherLayer(tiles [4]*geo.SlippyMapTile, feature string) (image.Image, 
 	return assembleMapTiles(images), nil
 }
 
-func getPrecipitationLayer(tiles [4]*geo.SlippyMapTile) (image.Image, error) {
-	return getWeatherLayer(tiles, "precipitation")
+func (c *ClimaCell) getPrecipitationLayer(tiles [4]*geo.SlippyMapTile) (image.Image, error) {
+	return c.getWeatherLayer(tiles, "precipitation")
 }
 
 func getOpenStreetMapLayers(tiles [4]*geo.SlippyMapTile) (image.Image, error) {
